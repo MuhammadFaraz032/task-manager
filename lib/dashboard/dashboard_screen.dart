@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:task_manager/core/widgets/comingsoon.dart';
 import 'package:task_manager/dashboard/bottomnavbar.dart';
+import 'package:task_manager/profile/profilepage.dart';
+import 'package:task_manager/projects/projectspage.dart';
 import 'package:task_manager/settings/settingspage.dart';
 
 class MainDashboard extends StatefulWidget {
@@ -16,11 +18,13 @@ class _MainDashboardState extends State<MainDashboard> {
 
   final List<Widget> _pages = const [
     MainContent(),
-    ComingSoon(pageName: "Projects"),
+    // ComingSoon(pageName: "Projects"),
+    ProjectsScreen(),
     ComingSoon(pageName: "Tasks"),
     // ComingSoon(pageName: "Settings"),
     SettingsScreen(),
-    ComingSoon(pageName: "Profile"),
+    // ComingSoon(pageName: "Profile"),
+    ProfileScreen(),
   ];
 
   @override
