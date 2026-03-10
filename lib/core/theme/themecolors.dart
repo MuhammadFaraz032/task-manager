@@ -1,5 +1,20 @@
 import 'package:flutter/material.dart';
 
+class AppColors {
+  AppColors._();
+
+  static const Color primary = Color(0xFF2563EB);
+  static const Color secondary = Color(0xFF8B5CF6);
+  static const Color error = Color(0xFFEF4444);
+  static const Color success = Color(0xFF22C55E);
+  static const Color warning = Color(0xFFF59E0B);
+
+  static const List<Color> brandGradient = [
+    Color(0xFF2563EB),
+    Color(0xFF8B5CF6),
+  ];
+}
+
 ThemeData lightTheme = ThemeData(
   useMaterial3: true,
   brightness: Brightness.light,

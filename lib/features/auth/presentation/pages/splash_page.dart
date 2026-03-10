@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:task_manager/loginscreen/login.dart';
+import 'package:go_router/go_router.dart';
+import 'package:task_manager/core/theme/themecolors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,66 +14,60 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    _navigateToLogin();
+  }
 
-    Future.delayed(const Duration(seconds: 7), () {
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 800),
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const LoginScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
-      );
-    });
+  // LEARNING: We extracted navigation logic into its own method.
+  // Keeps initState() clean and readable.
+  Future<void> _navigateToLogin() async {
+    await Future.delayed(const Duration(seconds: 3));
+    // LEARNING: mounted check is critical before using context
+    // after an async gap. The widget may have been disposed
+    // while we were waiting — without this check you get
+    // "use of context after async gap" errors.
+    if (!mounted) return;
+    context.go('/login');
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: isDark 
-          ? const Color(0xFF0F172A)  // Dark background
-          : const Color(0xFFF8FAFC), // Light background
-      body: SizedBox(
-        width: 390,
-        height: 884,
+      backgroundColor: cs.background,
+      // LEARNING: SizedBox.expand() fills the entire screen
+      // regardless of device size. Always use this instead of
+      // hardcoded width/height for full-screen widgets.
+      body: SizedBox.expand(
         child: Stack(
           children: [
-            /// Top blur circle
+            /// Top right blur circle
             Positioned(
               right: -128,
               top: -128,
               child: _blurCircle(
                 size: 384,
-                color: (isDark ? const Color(0xFF2563EB) : const Color(0xFF3B82F6))
-                    .withOpacity(0.1),
+                color: cs.primary.withOpacity(0.1),
                 blur: 60,
               ),
             ),
 
-            /// Bottom blur circle
+            /// Bottom left blur circle
             Positioned(
               left: -128,
               bottom: -128,
               child: _blurCircle(
                 size: 384,
-                color: (isDark ? const Color(0xFF8B5CF6) : const Color(0xFFA78BFA))
-                    .withOpacity(0.1),
+                color: cs.secondary.withOpacity(0.1),
                 blur: 60,
               ),
             ),
 
-            /// Center big blur
+            /// Center ambient glow
             Center(
               child: _blurCircle(
                 size: 500,
-                color: (isDark ? const Color(0xFF2563EB) : const Color(0xFF3B82F6))
-                    .withOpacity(0.05),
+                color: cs.primary.withOpacity(0.05),
                 blur: 75,
               ),
             ),
@@ -83,22 +78,19 @@ class _SplashScreenState extends State<SplashScreen> {
                 children: [
                   const SizedBox(height: 80),
 
-                  /// Icon Section
-                  _iconSection(isDark),
+                  _iconSection(cs),
 
                   const SizedBox(height: 40),
 
-                  /// Title Section
-                  _titleSection(isDark),
+                  _titleSection(cs),
 
                   const Spacer(),
 
-                  /// Progress Section
-                  LoadingProgressSection(isDark: isDark),
+                  LoadingProgressSection(colorScheme: cs),
 
                   const SizedBox(height: 40),
 
-                  /// Bottom Indicator
+                  /// Home indicator bar
                   Container(
                     height: 32,
                     alignment: Alignment.center,
@@ -106,9 +98,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       width: 128,
                       height: 6,
                       decoration: BoxDecoration(
-                        color: isDark 
-                            ? const Color(0xFF1E293B).withOpacity(0.5)
-                            : const Color(0xFFE2E8F0).withOpacity(0.5),
+                        color: cs.outline.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
@@ -122,7 +112,6 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  /// Blur Circle Widget
   Widget _blurCircle({
     required double size,
     required Color color,
@@ -133,25 +122,26 @@ class _SplashScreenState extends State<SplashScreen> {
       child: Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+        ),
       ),
     );
   }
 
-  /// Icon Section
-  Widget _iconSection(bool isDark) {
+  Widget _iconSection(ColorScheme cs) {
     return Stack(
       alignment: Alignment.center,
       children: [
-        /// Outer blurred glow
+        /// Outer glow
         _blurCircle(
           size: 144,
-          color: (isDark ? const Color(0xFF2563EB) : const Color(0xFF3B82F6))
-              .withOpacity(0.2),
+          color: cs.primary.withOpacity(0.2),
           blur: 32,
         ),
 
-        /// Glass border effect
+        /// Glass backdrop
         ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: BackdropFilter(
@@ -160,47 +150,45 @@ class _SplashScreenState extends State<SplashScreen> {
               width: 112,
               height: 112,
               decoration: BoxDecoration(
-                color: isDark 
-                    ? const Color(0xFF1E293B).withOpacity(0.4)
-                    : Colors.white.withOpacity(0.3),
+                color: cs.surface.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isDark 
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.white.withOpacity(0.2),
+                  color: cs.onSurface.withOpacity(0.05),
                 ),
               ),
             ),
           ),
         ),
 
-        /// Gradient Icon Box
+        /// Gradient icon box
         Container(
           width: 96,
           height: 96,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
+              colors: AppColors.brandGradient,
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: (isDark ? const Color(0xFF2563EB) : const Color(0xFF3B82F6))
-                    .withOpacity(0.25),
+                color: cs.primary.withOpacity(0.25),
                 blurRadius: 50,
               ),
             ],
           ),
-          child: const Icon(Icons.bolt, color: Colors.white, size: 40),
+          child: const Icon(
+            Icons.bolt,
+            color: Colors.white,
+            size: 40,
+          ),
         ),
       ],
     );
   }
 
-  /// Title Section
-  Widget _titleSection(bool isDark) {
+  Widget _titleSection(ColorScheme cs) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -211,9 +199,7 @@ class _SplashScreenState extends State<SplashScreen> {
               fontSize: 36,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.9,
-              color: isDark 
-                  ? const Color(0xFFF1F5F9)   // Dark mode text
-                  : const Color(0xFF1E293B),  // Light mode text
+              color: cs.onBackground,
             ),
           ),
           const SizedBox(height: 8),
@@ -223,9 +209,7 @@ class _SplashScreenState extends State<SplashScreen> {
               fontSize: 14,
               fontWeight: FontWeight.w500,
               letterSpacing: 2.8,
-              color: isDark 
-                  ? const Color(0xFF94A3B8)   // Dark mode secondary
-                  : const Color(0xFF64748B),  // Light mode secondary
+              color: cs.onSurface.withOpacity(0.6),
             ),
           ),
         ],
@@ -234,19 +218,27 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
+// LEARNING: LoadingProgressSection is its own StatefulWidget
+// because it has its own AnimationController lifecycle.
+// Keeping animation state separate from page state is clean
+// architecture — each widget manages only its own concerns.
 class LoadingProgressSection extends StatefulWidget {
-  final bool isDark;
-  
-  const LoadingProgressSection({super.key, required this.isDark});
+  final ColorScheme colorScheme;
+
+  const LoadingProgressSection({
+    super.key,
+    required this.colorScheme,
+  });
 
   @override
-  State<LoadingProgressSection> createState() => _LoadingProgressSectionState();
+  State<LoadingProgressSection> createState() =>
+      _LoadingProgressSectionState();
 }
 
 class _LoadingProgressSectionState extends State<LoadingProgressSection>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
 
   @override
   void initState() {
@@ -254,15 +246,19 @@ class _LoadingProgressSectionState extends State<LoadingProgressSection>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      // LEARNING: Animation duration matches the splash delay (3s)
+      // so the bar fills exactly as navigation triggers.
+      duration: const Duration(seconds: 3),
     );
 
-    _animation =
-        Tween<double>(begin: 0, end: 1).animate(
-          CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-        )..addListener(() {
-          setState(() {});
-        });
+    _animation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    )..addListener(() {
+        setState(() {});
+      });
 
     _controller.forward();
   }
@@ -275,15 +271,15 @@ class _LoadingProgressSectionState extends State<LoadingProgressSection>
 
   @override
   Widget build(BuildContext context) {
+    final cs = widget.colorScheme;
     final percent = (_animation.value * 100).toInt();
-    final isDark = widget.isDark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 35),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// Top row
+          /// Label row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -293,17 +289,15 @@ class _LoadingProgressSectionState extends State<LoadingProgressSection>
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1,
-                  color: isDark 
-                      ? const Color(0xFF64748B)  // Dark mode
-                      : const Color(0xFF94A3B8), // Light mode
+                  color: cs.onSurface.withOpacity(0.4),
                 ),
               ),
               Text(
                 "$percent%",
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF2563EB), // Primary color (same for both)
+                  color: cs.primary,
                 ),
               ),
             ],
@@ -311,25 +305,29 @@ class _LoadingProgressSectionState extends State<LoadingProgressSection>
 
           const SizedBox(height: 16),
 
-          /// Progress Bar
+          /// Progress bar
           Stack(
             children: [
+              /// Background track
               Container(
                 height: 8,
                 decoration: BoxDecoration(
-                  color: isDark 
-                      ? const Color(0xFF1E293B)   // Dark surface
-                      : const Color(0xFFE2E8F0),  // Light border
+                  color: cs.outline,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
+
+              /// Filled portion
+              // LEARNING: FractionallySizedBox is the correct way
+              // to show a percentage-based width. Never use
+              // double.infinity * progress — it evaluates to infinity.
               FractionallySizedBox(
                 widthFactor: _animation.value,
                 child: Container(
                   height: 8,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
+                    gradient: const LinearGradient(
+                      colors: AppColors.brandGradient,
                     ),
                     borderRadius: BorderRadius.circular(999),
                   ),
@@ -347,9 +345,7 @@ class _LoadingProgressSectionState extends State<LoadingProgressSection>
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
                 letterSpacing: 1,
-                color: isDark 
-                    ? const Color(0xFF475569)   // Dark text secondary
-                    : const Color(0xFF94A3B8),  // Light text disabled
+                color: cs.onSurface.withOpacity(0.3),
               ),
             ),
           ),
