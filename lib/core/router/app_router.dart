@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:task_manager/core/widgets/app_bottom_navbar.dart';
 import 'package:task_manager/features/auth/presentation/pages/login_page.dart';
 import 'package:task_manager/features/auth/presentation/pages/profile_page.dart';
@@ -10,47 +11,65 @@ import 'package:task_manager/features/projects/presentation/pages/project_detail
 import 'package:task_manager/features/projects/presentation/pages/projects_page.dart';
 import 'package:task_manager/features/tasks/presentation/pages/task_details_page.dart';
 import 'package:task_manager/features/tasks/presentation/pages/task_list_page.dart';
+import 'package:task_manager/features/auth/presentation/pages/register_page.dart';
 
-// LEARNING: GoRouter is the central navigation config for the app.
-// Define it once at the top level and provide it to MaterialApp.router.
-// Every route in the app lives here — no Navigator.push anywhere.
+// LEARNING: GoRouter listens to Firebase auth state stream.
+// Whenever auth state changes (login/logout) the router
+// automatically re-evaluates the redirect and navigates
+// the user to the correct screen.
 final GoRouter appRouter = GoRouter(
-  // LEARNING: initialLocation is the first route the app opens.
-  // This will later be replaced by a redirect based on auth state.
   initialLocation: '/',
 
-  // LEARNING: routes is the list of all possible destinations.
-  // GoRouter reads this list when context.go('/path') is called
-  // and builds the matching widget.
+  // LEARNING: refreshListenable tells GoRouter to re-run
+  // the redirect function whenever Firebase auth state changes.
+  // Without this the redirect only runs once at app start.
+  refreshListenable: GoRouterRefreshStream(
+    FirebaseAuth.instance.authStateChanges(),
+  ),
+
+  // LEARNING: redirect runs before every navigation.
+  // Return a path to redirect, return null to allow navigation.
+  redirect: (context, state) {
+    final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+    final currentPath = state.uri.toString();
+
+    // Pages that don't require login
+    final isAuthPage = currentPath == '/login' ||
+        currentPath == '/register' ||
+        currentPath == '/';
+
+    // LEARNING: If not logged in and trying to access
+    // a protected page → send to login
+    if (!isLoggedIn && !isAuthPage) {
+      return '/login';
+    }
+
+    // LEARNING: If already logged in and trying to access
+    // login/register/splash → send to dashboard
+    if (isLoggedIn && isAuthPage) {
+      return '/dashboard';
+    }
+
+    // null means "allow navigation, no redirect needed"
+    return null;
+  },
+
   routes: [
-    // ─────────────────────────────────────────────
-    // SPLASH ROUTE
-    // ─────────────────────────────────────────────
     GoRoute(
       path: '/',
       name: 'splash',
-      // LEARNING: builder returns the widget for this route.
-      // (context, state) — state carries route params if any.
       builder: (context, state) => const SplashScreen(),
     ),
-
-    // ─────────────────────────────────────────────
-    // LOGIN ROUTE
-    // ─────────────────────────────────────────────
     GoRoute(
       path: '/login',
       name: 'login',
       builder: (context, state) => const LoginScreen(),
     ),
-
-    // ─────────────────────────────────────────────
-    // SHELL ROUTE — persistent bottom nav
-    // LEARNING: ShellRoute wraps child routes inside a shared
-    // shell widget. The shell (bottom nav + scaffold) stays
-    // mounted while only the body content changes.
-    // This is how you get a persistent bottom nav bar
-    // without rebuilding it on every navigation.
-    // ─────────────────────────────────────────────
+    GoRoute(
+      path: '/register',
+      name: 'register',
+      builder: (context, state) => const RegisterScreen(),
+    ),
     ShellRoute(
       builder: (context, state, child) {
         return AppShell(child: child);
@@ -66,11 +85,6 @@ final GoRouter appRouter = GoRouter(
           name: 'projects',
           builder: (context, state) => const ProjectsScreen(),
         ),
-        // GoRoute(
-        //   path: '/tasks',
-        //   name: 'tasks',
-        //   builder: (context, state) => const ComingSoon(pageName: 'Tasks'),
-        // ),
         GoRoute(
           path: '/tasks',
           name: 'tasks',
@@ -88,26 +102,14 @@ final GoRouter appRouter = GoRouter(
         ),
       ],
     ),
-
-    // ─────────────────────────────────────────────
-    // PROJECT DETAIL ROUTE — outside ShellRoute
-    // LEARNING: ProjectDetail is outside ShellRoute intentionally.
-    // Detail pages are full screen — no bottom nav visible.
-    // If it were inside ShellRoute, the bottom nav would show
-    // on the detail page which is wrong UX.
-    // ─────────────────────────────────────────────
     GoRoute(
       path: '/project/:id',
       name: 'project-detail',
       builder: (context, state) {
-        // LEARNING: pathParameters extracts the :id from the URL.
-        // context.go('/project/abc123') → projectId = 'abc123'
-        // This is how you pass data through routes.
         final projectId = state.pathParameters['id'] ?? '';
         return ProjectDetailScreen(projectId: projectId);
       },
     ),
-
     GoRoute(
       path: '/task/:id',
       name: 'task-detail',
@@ -118,9 +120,6 @@ final GoRouter appRouter = GoRouter(
     ),
   ],
 
-  // LEARNING: errorBuilder shows a fallback UI if the user
-  // navigates to a route that doesn't exist.
-  // Always add this — without it the app crashes on bad routes.
   errorBuilder: (context, state) => Scaffold(
     body: Center(
       child: Text(
@@ -131,12 +130,21 @@ final GoRouter appRouter = GoRouter(
   ),
 );
 
+// LEARNING: GoRouterRefreshStream converts a Stream into
+// a Listenable that GoRouter can listen to.
+// Firebase authStateChanges() is a Stream — every time
+// user logs in or out it emits a new value.
+// GoRouter sees the change and re-runs the redirect.
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    // Listen to the stream and notify GoRouter
+    // whenever it emits a new value
+    stream.listen((_) => notifyListeners());
+  }
+}
+
 // ─────────────────────────────────────────────────────────
-// APP SHELL
-// LEARNING: AppShell is the persistent wrapper for all
-// ShellRoute children. It holds the Scaffold + BottomNavBar.
-// 'child' is whatever the current route's widget is —
-// go_router injects it automatically.
+// APP SHELL — unchanged
 // ─────────────────────────────────────────────────────────
 class AppShell extends StatefulWidget {
   final Widget child;
@@ -150,9 +158,6 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
 
-  // LEARNING: We map each index to its route path.
-  // When the user taps a nav item, we go to that path.
-  // When the route changes, we find the matching index.
   static const List<String> _routes = [
     '/dashboard',
     '/projects',
@@ -168,19 +173,11 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    // LEARNING: We sync _currentIndex with the actual current
-    // route so the correct nav item is highlighted even when
-    // navigation happens from outside the bottom nav
-    // (e.g. context.go('/projects') from dashboard).
     final location = GoRouterState.of(context).uri.toString();
     _currentIndex = _routes.indexWhere((r) => location.startsWith(r));
-    // indexWhere returns -1 if not found — fallback to 0
     if (_currentIndex == -1) _currentIndex = 0;
 
     return Scaffold(
-      // LEARNING: 'child' is the current page widget injected
-      // by go_router. AppShell doesn't need to know what it is —
-      // it just displays it. This is the Shell pattern.
       body: widget.child,
       bottomNavigationBar: BottomNavigation(
         currentIndex: _currentIndex,
@@ -189,3 +186,29 @@ class _AppShellState extends State<AppShell> {
     );
   }
 }
+// ```
+
+// ---
+
+// ## What Changed
+// ```
+// Added:
+// ├── refreshListenable → GoRouterRefreshStream
+// │   → watches Firebase auth state
+// │   → re-runs redirect on login/logout
+
+// ├── redirect function
+// │   → not logged in + protected page → /login
+// │   → logged in + auth page → /dashboard
+// │   → otherwise → null (allow)
+
+// └── GoRouterRefreshStream class
+//     → converts Firebase Stream to Listenable
+// ```
+
+// Now test these flows:
+// ```
+// 1. App open while logged out → should go to /login
+// 2. App open while logged in  → should skip login → /dashboard
+// 3. After logout              → should go to /login automatically
+// 4. Try typing /dashboard URL → should redirect to /login

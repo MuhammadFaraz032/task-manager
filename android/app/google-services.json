@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "217643332600",
+    "project_id": "task-manager-faraz",
+    "storage_bucket": "task-manager-faraz.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:217643332600:android:d4069bb62df4057b9c1c0d",
+        "android_client_info": {
+          "package_name": "com.faraz.taskmanager"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "217643332600-q44nk41qmniahfqvgh2tfg4d4cchbpte.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.faraz.taskmanager",
+            "certificate_hash": "9c693f246bce1e681062b41d8b5a7700077b7957"
+          }
+        },
+        {
+          "client_id": "217643332600-b7n4un6sfvr2cv6v2e6h4he2v1fdaf02.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDS0rEOpiXgT3trNm6Yzd1LQC_0OT-RqaE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "217643332600-b7n4un6sfvr2cv6v2e6h4he2v1fdaf02.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

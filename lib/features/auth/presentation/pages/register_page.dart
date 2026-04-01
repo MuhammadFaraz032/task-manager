@@ -8,51 +8,52 @@ import 'package:task_manager/features/auth/presentation/bloc/auth_event.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
 import 'package:task_manager/features/auth/presentation/widgets/auth_text_field.dart';
 
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // LEARNING: BlocProvider creates a NEW AuthBloc instance
-    // for this screen using getIt (our service locator)
-    // When this screen is disposed, the bloc is closed automatically
-    return const _LoginView();
+    return const _RegisterView();
   }
 }
 
-class _LoginView extends StatefulWidget {
-  const _LoginView();
+class _RegisterView extends StatefulWidget {
+  const _RegisterView();
 
   @override
-  State<_LoginView> createState() => _LoginViewState();
+  State<_RegisterView> createState() => _RegisterViewState();
 }
 
-class _LoginViewState extends State<_LoginView> {
+class _RegisterViewState extends State<_RegisterView> {
+  late final TextEditingController _nameController;
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
+  late final TextEditingController _confirmPasswordController;
   final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
+    _nameController = TextEditingController();
     _emailController = TextEditingController();
     _passwordController = TextEditingController();
+    _confirmPasswordController = TextEditingController();
   }
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _onLogin(BuildContext context) {
+  void _onRegister(BuildContext context) {
     if (_formKey.currentState?.validate() ?? false) {
-      // LEARNING: context.read<AuthBloc>() finds the AuthBloc
-      // provided above and adds a LoginRequested event to it
-      // This triggers _onLoginRequested in auth_bloc.dart
       context.read<AuthBloc>().add(
-        AuthLoginRequested(
+        AuthRegisterRequested(
+          fullName: _nameController.text.trim(),
           email: _emailController.text.trim(),
           password: _passwordController.text,
         ),
@@ -64,14 +65,31 @@ class _LoginViewState extends State<_LoginView> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    // LEARNING: BlocListener listens to state changes
-    // and performs side effects like navigation or showing snackbars
-    // It does NOT rebuild the UI — that's BlocBuilder's job
     return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
+      listener: (context, state) async {
+        // if (state is AuthAuthenticated) {
+        //   // LEARNING: After register → auto create workspace
+        //   // using the user's name + "Workspace" as the name
+        //   // This is transparent to the user — they never see this step
+        //   context.read<WorkspaceCubit>().createWorkspace(
+        //     name: "${state.user.fullName}'s Workspace",
+        //     ownerId: state.user.uid,
+        //   );
+        //   context.go('/dashboard');
+        // }
         if (state is AuthAuthenticated) {
           context.go('/dashboard');
         }
+        // print('🟡 Auth state changed: $state');
+        // if (state is AuthAuthenticated) {
+        //   await context.read<WorkspaceCubit>().createWorkspace(
+        //     name: "${state.user.fullName}'s Workspace",
+        //     ownerId: state.user.uid,
+        //   );
+        //   if (context.mounted) {
+        //     context.go('/dashboard');
+        //   }
+        // }
         if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -89,9 +107,12 @@ class _LoginViewState extends State<_LoginView> {
           width: MediaQuery.of(context).size.width,
           decoration: BoxDecoration(
             gradient: RadialGradient(
-              center: Alignment.topRight,
+              center: Alignment.topLeft,
               radius: 1.2,
-              colors: [cs.primary.withValues(alpha: 0.12), Colors.transparent],
+              colors: [
+                cs.secondary.withValues(alpha: 0.12),
+                Colors.transparent,
+              ],
             ),
           ),
           child: Form(
@@ -107,7 +128,7 @@ class _LoginViewState extends State<_LoginView> {
                   child: IntrinsicHeight(
                     child: Column(
                       children: [
-                        const SizedBox(height: 80),
+                        const SizedBox(height: 60),
 
                         /// Logo
                         Container(
@@ -120,7 +141,7 @@ class _LoginViewState extends State<_LoginView> {
                             borderRadius: BorderRadius.circular(24),
                             boxShadow: [
                               BoxShadow(
-                                color: cs.primary.withValues(alpha: 0.3),
+                                color: cs.secondary.withValues(alpha: 0.3),
                                 blurRadius: 15,
                                 offset: const Offset(0, 8),
                               ),
@@ -136,7 +157,7 @@ class _LoginViewState extends State<_LoginView> {
                         const SizedBox(height: 32),
 
                         Text(
-                          "Welcome Back",
+                          "Create Account",
                           style: TextStyle(
                             color: cs.onSurface,
                             fontSize: 30,
@@ -147,7 +168,7 @@ class _LoginViewState extends State<_LoginView> {
                         const SizedBox(height: 8),
 
                         Text(
-                          "Sign in to continue",
+                          "Start managing your work better",
                           style: TextStyle(
                             color: cs.onSurface.withValues(alpha: 0.6),
                             fontSize: 16,
@@ -156,7 +177,24 @@ class _LoginViewState extends State<_LoginView> {
 
                         const SizedBox(height: 40),
 
-                        /// Email
+                        AuthTextField(
+                          label: "Full Name",
+                          hint: "Faraz Ahmed",
+                          icon: Icons.person_outline_rounded,
+                          controller: _nameController,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Full name is required';
+                            }
+                            if (value.trim().length < 2) {
+                              return 'Enter a valid name';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 20),
+
                         AuthTextField(
                           label: "Email",
                           hint: "name@example.com",
@@ -175,7 +213,6 @@ class _LoginViewState extends State<_LoginView> {
 
                         const SizedBox(height: 20),
 
-                        /// Password
                         AuthTextField(
                           label: "Password",
                           hint: "••••••••",
@@ -193,13 +230,28 @@ class _LoginViewState extends State<_LoginView> {
                           },
                         ),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 20),
 
-                        /// Login Button
-                        // LEARNING: BlocBuilder rebuilds ONLY this
-                        // button when auth state changes
-                        // So the loading spinner shows only here
-                        // while the rest of the UI stays the same
+                        AuthTextField(
+                          label: "Confirm Password",
+                          hint: "••••••••",
+                          icon: Icons.lock_outline,
+                          isPassword: true,
+                          controller: _confirmPasswordController,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please confirm your password';
+                            }
+                            if (value != _passwordController.text) {
+                              return 'Passwords do not match';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        /// Register Button
                         BlocBuilder<AuthBloc, AuthState>(
                           builder: (context, state) {
                             final isLoading = state is AuthLoading;
@@ -208,7 +260,7 @@ class _LoginViewState extends State<_LoginView> {
                                   ? null
                                   : () => {
                                       FocusScope.of(context).unfocus(),
-                                      _onLogin(context),
+                                      _onRegister(context),
                                     },
                               borderRadius: BorderRadius.circular(12),
                               child: Container(
@@ -237,7 +289,7 @@ class _LoginViewState extends State<_LoginView> {
                                           ),
                                         )
                                       : const Text(
-                                          "Sign In",
+                                          "Create Account",
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 18,
@@ -252,7 +304,6 @@ class _LoginViewState extends State<_LoginView> {
 
                         const SizedBox(height: 24),
 
-                        /// Divider
                         Row(
                           children: [
                             Expanded(child: Divider(color: cs.outline)),
@@ -274,7 +325,6 @@ class _LoginViewState extends State<_LoginView> {
 
                         const SizedBox(height: 24),
 
-                        /// Google Sign In
                         InkWell(
                           onTap: () {
                             // TODO: Google Sign In — Phase 2
@@ -301,22 +351,21 @@ class _LoginViewState extends State<_LoginView> {
 
                         const Spacer(),
 
-                        /// Footer
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              "Don't have an account?",
+                              "Already have an account?",
                               style: TextStyle(
                                 color: cs.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                             const SizedBox(width: 4),
                             InkWell(
-                              onTap: () => context.go('/register'),
+                              onTap: () => context.go('/login'),
                               borderRadius: BorderRadius.circular(4),
                               child: Text(
-                                "Sign Up",
+                                "Sign In",
                                 style: TextStyle(
                                   color: cs.primary,
                                   fontWeight: FontWeight.bold,
@@ -326,7 +375,7 @@ class _LoginViewState extends State<_LoginView> {
                           ],
                         ),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
