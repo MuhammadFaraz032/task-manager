@@ -135,20 +135,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
     try {
-      // LEARNING: getCurrentUser() checks if Firebase
-      // already has a logged in user from previous session
-      // Firebase persists auth state automatically
-      // we just need to read it on app start
       final user = await _getCurrentUserUseCase.execute();
       if (user != null) {
         print('✅ User already logged in: ${user.uid}');
+
+        // LEARNING: Load workspace here too
+        // because when user is already logged in
+        // they skip the login flow entirely
+        // so we must load workspace here
+        await _getWorkspaceUseCase.execute(ownerId: user.uid);
+        print('✅ Workspace loaded for: ${user.uid}');
+
         emit(AuthAuthenticated(user));
       } else {
-        print('ℹ️ No user logged in');
         emit(const AuthUnauthenticated());
       }
     } catch (e) {
-      print('❌ Auth check error: $e');
       emit(const AuthUnauthenticated());
     }
   }

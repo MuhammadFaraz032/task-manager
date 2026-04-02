@@ -10,18 +10,18 @@ class WorkspaceCubit extends Cubit<WorkspaceState> {
   WorkspaceCubit({
     required CreateWorkspaceUseCase createWorkspaceUseCase,
     required GetWorkspaceUseCase getWorkspaceUseCase,
-  })  : _createWorkspaceUseCase = createWorkspaceUseCase,
-        _getWorkspaceUseCase = getWorkspaceUseCase,
-        super(const WorkspaceInitial());
+  }) : _createWorkspaceUseCase = createWorkspaceUseCase,
+       _getWorkspaceUseCase = getWorkspaceUseCase,
+       super(const WorkspaceInitial());
 
   // Called after login — load existing workspace
   Future<void> loadWorkspace({required String ownerId}) async {
     emit(const WorkspaceLoading());
     try {
-      final workspace = await _getWorkspaceUseCase.execute(
-        ownerId: ownerId,
-      );
+      print('🔵 WorkspaceCubit loading workspace for: $ownerId');
+      final workspace = await _getWorkspaceUseCase.execute(ownerId: ownerId);
       if (workspace != null) {
+        print('✅ WorkspaceCubit loaded: ${workspace.id}');
         emit(WorkspaceLoaded(workspace));
       } else {
         emit(const WorkspaceError('Workspace not found'));
@@ -30,6 +30,21 @@ class WorkspaceCubit extends Cubit<WorkspaceState> {
       emit(WorkspaceError(e.toString()));
     }
   }
+  // Future<void> loadWorkspace({required String ownerId}) async {
+  //   emit(const WorkspaceLoading());
+  //   try {
+  //     final workspace = await _getWorkspaceUseCase.execute(
+  //       ownerId: ownerId,
+  //     );
+  //     if (workspace != null) {
+  //       emit(WorkspaceLoaded(workspace));
+  //     } else {
+  //       emit(const WorkspaceError('Workspace not found'));
+  //     }
+  //   } catch (e) {
+  //     emit(WorkspaceError(e.toString()));
+  //   }
+  // }
 
   // Called after register — create new workspace
   Future<void> createWorkspace({

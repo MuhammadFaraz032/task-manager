@@ -13,6 +13,15 @@ import 'package:task_manager/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:task_manager/features/auth/domain/usecases/register_usecase.dart';
 import 'package:task_manager/features/auth/domain/usecases/update_user_usecase.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:task_manager/features/tasks/data/datasources/task_remote_datasource.dart';
+import 'package:task_manager/features/tasks/data/repositories/task_repository_impl.dart';
+import 'package:task_manager/features/tasks/domain/repositories/task_repository.dart';
+import 'package:task_manager/features/tasks/domain/usecases/create_task_usecase.dart';
+import 'package:task_manager/features/tasks/domain/usecases/delete_task_usecase.dart';
+import 'package:task_manager/features/tasks/domain/usecases/get_tasks_usecase.dart';
+import 'package:task_manager/features/tasks/domain/usecases/toggle_task_usecase.dart';
+import 'package:task_manager/features/tasks/domain/usecases/update_task_usecase.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
 
 // Workspace
 import 'package:task_manager/features/workspace/data/datasources/workspace_remote_datasource.dart';
@@ -21,6 +30,16 @@ import 'package:task_manager/features/workspace/domain/repositories/workspace_re
 import 'package:task_manager/features/workspace/domain/usecases/create_workspace_usecase.dart';
 import 'package:task_manager/features/workspace/domain/usecases/get_workspace_usecase.dart';
 import 'package:task_manager/features/workspace/presentation/cubit/workspace_cubit.dart';
+
+// Add imports
+import 'package:task_manager/features/projects/data/datasources/project_remote_datasource.dart';
+import 'package:task_manager/features/projects/data/repositories/project_repository_impl.dart';
+import 'package:task_manager/features/projects/domain/repositories/project_repository.dart';
+import 'package:task_manager/features/projects/domain/usecases/create_project_usecase.dart';
+import 'package:task_manager/features/projects/domain/usecases/delete_project_usecase.dart';
+import 'package:task_manager/features/projects/domain/usecases/get_projects_usecase.dart';
+import 'package:task_manager/features/projects/domain/usecases/update_project_usecase.dart';
+import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -94,6 +113,68 @@ Future<void> setupDependencies() async {
     () => WorkspaceCubit(
       createWorkspaceUseCase: getIt(),
       getWorkspaceUseCase: getIt(),
+    ),
+  );
+
+  // ─────────────────────────────────────────────
+  // PROJECTS FEATURE
+  // ─────────────────────────────────────────────
+
+  // Data Sources
+  getIt.registerLazySingleton<ProjectRemoteDataSource>(
+    () => ProjectRemoteDataSourceImpl(firestore: getIt()),
+  );
+
+  // Repositories
+  getIt.registerLazySingleton<ProjectRepository>(
+    () => ProjectRepositoryImpl(dataSource: getIt()),
+  );
+
+  // Use Cases
+  getIt.registerLazySingleton(() => GetProjectsUseCase(getIt()));
+  getIt.registerLazySingleton(() => CreateProjectUseCase(getIt()));
+  getIt.registerLazySingleton(() => UpdateProjectUseCase(getIt()));
+  getIt.registerLazySingleton(() => DeleteProjectUseCase(getIt()));
+
+  // Bloc — Factory because it has screen state
+  getIt.registerFactory(
+    () => ProjectBloc(
+      getProjectsUseCase: getIt(),
+      createProjectUseCase: getIt(),
+      updateProjectUseCase: getIt(),
+      deleteProjectUseCase: getIt(),
+    ),
+  );
+
+  // ─────────────────────────────────────────────
+  // TASKS FEATURE
+  // ─────────────────────────────────────────────
+
+  // Data Sources
+  getIt.registerLazySingleton<TaskRemoteDataSource>(
+    () => TaskRemoteDataSourceImpl(firestore: getIt()),
+  );
+
+  // Repositories
+  getIt.registerLazySingleton<TaskRepository>(
+    () => TaskRepositoryImpl(dataSource: getIt()),
+  );
+
+  // Use Cases
+  getIt.registerLazySingleton(() => GetTasksUseCase(getIt()));
+  getIt.registerLazySingleton(() => CreateTaskUseCase(getIt()));
+  getIt.registerLazySingleton(() => UpdateTaskUseCase(getIt()));
+  getIt.registerLazySingleton(() => ToggleTaskUseCase(getIt()));
+  getIt.registerLazySingleton(() => DeleteTaskUseCase(getIt()));
+
+  // Bloc
+  getIt.registerFactory(
+    () => TaskBloc(
+      getTasksUseCase: getIt(),
+      createTaskUseCase: getIt(),
+      updateTaskUseCase: getIt(),
+      toggleTaskUseCase: getIt(),
+      deleteTaskUseCase: getIt(),
     ),
   );
 }
