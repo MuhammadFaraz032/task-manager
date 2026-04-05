@@ -7,20 +7,22 @@ class UpdateProjectUseCase {
   UpdateProjectUseCase(this._repository);
 
   Future<ProjectEntity> execute({
-    required String projectId,
-    required String name,
-    required String description,
-    required ProjectStatus status,
-    required ProjectPriority priority,
-    DateTime? dueDate,
-  }) {
-    return _repository.updateProject(
-      projectId: projectId,
-      name: name,
-      description: description,
-      status: status,
-      priority: priority,
-      dueDate: dueDate,
-    );
-  }
+  required String projectId,
+  required String workspaceId, // ← add
+  required String name,
+  required String description,
+  required ProjectStatus status,
+  required ProjectPriority priority,
+  DateTime? dueDate,
+}) {
+  return _repository.updateProject(
+    projectId: projectId,
+    workspaceId: workspaceId, // ← add
+    name: name,
+    description: description,
+    status: status,
+    priority: priority,
+    dueDate: dueDate,
+  );
+}
 }

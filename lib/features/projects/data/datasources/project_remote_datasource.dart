@@ -17,6 +17,7 @@ abstract class ProjectRemoteDataSource {
 
   Future<ProjectModel> updateProject({
     required String projectId,
+    required String workspaceId,
     required String name,
     required String description,
     required ProjectStatus status,
@@ -26,6 +27,7 @@ abstract class ProjectRemoteDataSource {
 
   Future<void> deleteProject({
     required String projectId,
+    required String workspaceId,
     required String deletedBy,
   });
 }
@@ -96,59 +98,38 @@ class ProjectRemoteDataSourceImpl implements ProjectRemoteDataSource {
   }
 
   @override
-  Future<ProjectModel> updateProject({
-    required String projectId,
-    required String name,
-    required String description,
-    required ProjectStatus status,
-    required ProjectPriority priority,
-    DateTime? dueDate,
-  }) async {
-    // First get the existing project to find workspaceId
-    // LEARNING: We need workspaceId to build the correct path
-    // This is a tradeoff of subcollection architecture
-    final querySnapshot = await _firestore
-        .collectionGroup('projects')
-        .where(FieldPath.documentId, isEqualTo: projectId)
-        .get();
-
-    if (querySnapshot.docs.isEmpty) {
-      throw Exception('Project not found');
-    }
-
-    final doc = querySnapshot.docs.first;
-    await doc.reference.update({
-      'name': name,
-      'description': description,
-      'status': status.name,
-      'priority': priority.name,
-      'dueDate': dueDate != null ? Timestamp.fromDate(dueDate) : null,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-
-    final updated = await doc.reference.get();
-    return ProjectModel.fromFirestore(updated);
-  }
+Future<ProjectModel> updateProject({
+  required String projectId,
+  required String workspaceId,
+  required String name,
+  required String description,
+  required ProjectStatus status,
+  required ProjectPriority priority,
+  DateTime? dueDate,
+}) async {
+  final ref = _projectsCollection(workspaceId).doc(projectId);
+  await ref.update({
+    'name': name,
+    'description': description,
+    'status': status.name,
+    'priority': priority.name,
+    'dueDate': dueDate != null ? Timestamp.fromDate(dueDate) : null,
+    'updatedAt': FieldValue.serverTimestamp(),
+  });
+  final updated = await ref.get();
+  return ProjectModel.fromFirestore(updated);
+}
 
   @override
-  Future<void> deleteProject({
-    required String projectId,
-    required String deletedBy,
-  }) async {
-    // LEARNING: Soft delete — we never actually delete
-    // documents from Firestore. We just mark isDeleted = true
-    // This preserves data history and makes recovery possible
-    final querySnapshot = await _firestore
-        .collectionGroup('projects')
-        .where(FieldPath.documentId, isEqualTo: projectId)
-        .get();
-
-    if (querySnapshot.docs.isEmpty) return;
-
-    await querySnapshot.docs.first.reference.update({
-      'isDeleted': true,
-      'deletedBy': deletedBy,
-      'deletedAt': FieldValue.serverTimestamp(),
-    });
-  }
+Future<void> deleteProject({
+  required String projectId,
+  required String workspaceId,
+  required String deletedBy,
+}) async {
+  await _projectsCollection(workspaceId).doc(projectId).update({
+    'isDeleted': true,
+    'deletedBy': deletedBy,
+    'deletedAt': FieldValue.serverTimestamp(),
+  });
+}
 }

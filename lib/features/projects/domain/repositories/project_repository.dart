@@ -19,6 +19,7 @@ abstract class ProjectRepository {
 
   Future<ProjectEntity> updateProject({
     required String projectId,
+    required String workspaceId,
     required String name,
     required String description,
     required ProjectStatus status,
@@ -28,6 +29,7 @@ abstract class ProjectRepository {
 
   Future<void> deleteProject({
     required String projectId,
+    required String workspaceId,
     required String deletedBy,
   });
 }

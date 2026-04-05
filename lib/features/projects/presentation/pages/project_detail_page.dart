@@ -183,6 +183,8 @@ class ProjectDetailScreen extends StatelessWidget {
 
   void _showOptionsMenu(BuildContext context, ProjectEntity project) {
     final cs = Theme.of(context).colorScheme;
+    final workspaceId =
+        (context.read<WorkspaceCubit>().state as WorkspaceLoaded).workspace.id;
     final projectBloc = context.read<ProjectBloc>();
 
     showModalBottomSheet(
@@ -221,6 +223,7 @@ class ProjectDetailScreen extends StatelessWidget {
                   ProjectUpdateRequested(
                     projectId: project.id,
                     name: project.name,
+                    workspaceId: workspaceId,
                     description: project.description,
                     status: project.status == ProjectStatus.completed
                         ? ProjectStatus.active
@@ -252,6 +255,8 @@ class ProjectDetailScreen extends StatelessWidget {
     ProjectBloc projectBloc,
   ) {
     final cs = Theme.of(context).colorScheme;
+    final workspaceId =
+        (context.read<WorkspaceCubit>().state as WorkspaceLoaded).workspace.id;
 
     showDialog(
       context: context,
@@ -274,10 +279,11 @@ class ProjectDetailScreen extends StatelessWidget {
               projectBloc.add(
                 ProjectDeleteRequested(
                   projectId: project.id,
+                  workspaceId: workspaceId,
                   deletedBy: project.createdBy,
                 ),
               );
-              context.pop();
+              context.go('/projects');
             },
             child: Text('Delete', style: TextStyle(color: cs.error)),
           ),

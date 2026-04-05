@@ -35,20 +35,18 @@ abstract class TaskRemoteDataSource {
     required String completedBy,
   });
 
-  Future<void> deleteTask({
-    required String taskId,
-    required String deletedBy,
-  });
+  Future<void> deleteTask({required String taskId, required String deletedBy});
 }
 
 class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   final FirebaseFirestore _firestore;
 
   TaskRemoteDataSourceImpl({required FirebaseFirestore firestore})
-      : _firestore = firestore;
+    : _firestore = firestore;
 
   CollectionReference<Map<String, dynamic>> _tasksCollection(
-      String workspaceId) {
+    String workspaceId,
+  ) {
     return _firestore
         .collection('workspaces')
         .doc(workspaceId)
@@ -70,9 +68,10 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
       query = query.where('projectId', isEqualTo: projectId);
     }
 
-    return query.snapshots().map((snapshot) => snapshot.docs
-        .map((doc) => TaskModel.fromFirestore(doc))
-        .toList());
+    return query.snapshots().map(
+      (snapshot) =>
+          snapshot.docs.map((doc) => TaskModel.fromFirestore(doc)).toList(),
+    );
   }
 
   @override
@@ -114,12 +113,33 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
           .collection('projects')
           .doc(projectId)
           .update({
-        'totalTasks': FieldValue.increment(1),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+            'totalTasks': FieldValue.increment(1),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
     }
 
     return task;
+  }
+
+  Future<DocumentReference<Map<String, dynamic>>> _getTaskRef(
+    String taskId,
+  ) async {
+    // LEARNING: collectionGroup with FieldPath.documentId
+    // does not work with custom UUID document IDs
+    // Instead we use collectionGroup without documentId filter
+    // then access the reference directly
+    final querySnapshot = await _firestore
+        .collectionGroup('tasks')
+        .where('isDeleted', isEqualTo: false)
+        .get();
+
+    // Find by matching document ID manually
+    final doc = querySnapshot.docs.firstWhere(
+      (doc) => doc.id == taskId,
+      orElse: () => throw Exception('Task not found'),
+    );
+
+    return doc.reference;
   }
 
   @override
@@ -132,30 +152,27 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
     DateTime? dueDate,
     required List<ChecklistItem> checklist,
   }) async {
-    final querySnapshot = await _firestore
-        .collectionGroup('tasks')
-        .where(FieldPath.documentId, isEqualTo: taskId)
-        .get();
+    final ref = await _getTaskRef(taskId);
 
-    if (querySnapshot.docs.isEmpty) throw Exception('Task not found');
-
-    await querySnapshot.docs.first.reference.update({
+    await ref.update({
       'title': title,
       'description': description,
       'priority': priority.name,
       'status': status.name,
       'dueDate': dueDate != null ? Timestamp.fromDate(dueDate) : null,
       'checklist': checklist
-          .map((item) => {
-                'id': item.id,
-                'title': item.title,
-                'isCompleted': item.isCompleted,
-              })
+          .map(
+            (item) => {
+              'id': item.id,
+              'title': item.title,
+              'isCompleted': item.isCompleted,
+            },
+          )
           .toList(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    final updated = await querySnapshot.docs.first.reference.get();
+    final updated = await ref.get();
     return TaskModel.fromFirestore(updated);
   }
 
@@ -164,34 +181,26 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
     required String taskId,
     required String completedBy,
   }) async {
-    final querySnapshot = await _firestore
-        .collectionGroup('tasks')
-        .where(FieldPath.documentId, isEqualTo: taskId)
-        .get();
+    final ref = await _getTaskRef(taskId);
+    final snapshot = await ref.get();
+    final data = snapshot.data()!;
 
-    if (querySnapshot.docs.isEmpty) throw Exception('Task not found');
-
-    final doc = querySnapshot.docs.first;
-    final data = doc.data();
     final currentStatus = TaskStatus.values.firstWhere(
       (e) => e.name == data['status'],
       orElse: () => TaskStatus.todo,
     );
 
     final isCompleting = currentStatus != TaskStatus.completed;
-    final newStatus =
-        isCompleting ? TaskStatus.completed : TaskStatus.todo;
+    final newStatus = isCompleting ? TaskStatus.completed : TaskStatus.todo;
 
-    await doc.reference.update({
+    await ref.update({
       'status': newStatus.name,
       'completedBy': isCompleting ? completedBy : null,
-      'completedAt': isCompleting
-          ? FieldValue.serverTimestamp()
-          : null,
+      'completedAt': isCompleting ? FieldValue.serverTimestamp() : null,
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    // LEARNING: Update project completedTasks count
+    // Update project completedTasks count
     final workspaceId = data['workspaceId'];
     final projectId = data['projectId'];
 
@@ -202,13 +211,12 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
           .collection('projects')
           .doc(projectId)
           .update({
-        'completedTasks':
-            FieldValue.increment(isCompleting ? 1 : -1),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+            'completedTasks': FieldValue.increment(isCompleting ? 1 : -1),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
     }
 
-    final updated = await doc.reference.get();
+    final updated = await ref.get();
     return TaskModel.fromFirestore(updated);
   }
 
@@ -217,25 +225,20 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
     required String taskId,
     required String deletedBy,
   }) async {
-    final querySnapshot = await _firestore
-        .collectionGroup('tasks')
-        .where(FieldPath.documentId, isEqualTo: taskId)
-        .get();
+    final ref = await _getTaskRef(taskId);
+    final snapshot = await ref.get();
+    final data = snapshot.data()!;
 
-    if (querySnapshot.docs.isEmpty) return;
-
-    final doc = querySnapshot.docs.first;
-    final data = doc.data();
-    final projectId = data['projectId'];
-    final workspaceId = data['workspaceId'];
-
-    await doc.reference.update({
+    await ref.update({
       'isDeleted': true,
       'deletedBy': deletedBy,
       'deletedAt': FieldValue.serverTimestamp(),
     });
 
-    // Decrement project task count if task belongs to project
+    // Decrement project task count
+    final projectId = data['projectId'];
+    final workspaceId = data['workspaceId'];
+
     if (projectId != null) {
       await _firestore
           .collection('workspaces')
@@ -243,9 +246,9 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
           .collection('projects')
           .doc(projectId)
           .update({
-        'totalTasks': FieldValue.increment(-1),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+            'totalTasks': FieldValue.increment(-1),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
     }
   }
 }

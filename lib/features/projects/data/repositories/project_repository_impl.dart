@@ -35,32 +35,38 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Future<ProjectEntity> updateProject({
-    required String projectId,
-    required String name,
-    required String description,
-    required ProjectStatus status,
-    required ProjectPriority priority,
-    DateTime? dueDate,
-  }) {
-    return _dataSource.updateProject(
-      projectId: projectId,
-      name: name,
-      description: description,
-      status: status,
-      priority: priority,
-      dueDate: dueDate,
-    );
-  }
+Future<ProjectEntity> updateProject({
+  required String projectId,
+  required String workspaceId, // ← add
+  required String name,
+  required String description,
+  required ProjectStatus status,
+  required ProjectPriority priority,
+  DateTime? dueDate,
+}) {
+  return _dataSource.updateProject(
+    projectId: projectId,
+    workspaceId: workspaceId, // ← add
+    name: name,
+    description: description,
+    status: status,
+    priority: priority,
+    dueDate: dueDate,
+  );
+}
 
-  @override
-  Future<void> deleteProject({
-    required String projectId,
-    required String deletedBy,
-  }) {
-    return _dataSource.deleteProject(
-      projectId: projectId,
-      deletedBy: deletedBy,
-    );
-  }
+@override
+Future<void> deleteProject({
+  required String projectId,
+  required String workspaceId, // ← add
+  required String deletedBy,
+}) {
+  return _dataSource.deleteProject(
+    projectId: projectId,
+    workspaceId: workspaceId, // ← add
+    deletedBy: deletedBy,
+  );
+}
+
+
 }

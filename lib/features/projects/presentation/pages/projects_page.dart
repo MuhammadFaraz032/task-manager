@@ -212,57 +212,91 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 // Loaded state
                 if (state is ProjectsLoaded) {
                   final filtered = _filterProjects(state.projects);
-
-                  // LEARNING: RefreshIndicator adds pull to
-                  // refresh — onRefresh re-fires the load event
-                  return RefreshIndicator(
-                    color: cs.primary,
-                    onRefresh: () async => _loadProjects(),
-                    child: filtered.isEmpty
-                        ? _EmptyState(
-                            cs: cs,
-                            selectedTab: _selectedTab,
-                            onAddProject: () => _showAddProjectSheet(context),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: GridView.builder(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    mainAxisSpacing: 12,
-                                    crossAxisSpacing: 12,
-                                    childAspectRatio: 0.9,
-                                  ),
-                              itemCount: filtered.length,
-                              itemBuilder: (context, index) {
-                                final project = filtered[index];
-                                return _ProjectCard(
-                                  project: project,
-                                  indicatorColor: _priorityColor(
-                                    project.priority,
-                                    cs,
-                                  ),
-                                  dueDate: _formatDueDate(project.dueDate),
-                                  onTap: () =>
-                                      context.go('/project/${project.id}'),
-                                );
-                              },
+                  return Stack(
+                    children: [
+                      RefreshIndicator(
+                        color: cs.primary,
+                        onRefresh: () async => _loadProjects(),
+                        child: filtered.isEmpty
+                            ? _EmptyState(
+                                cs: cs,
+                                selectedTab: _selectedTab,
+                                onAddProject: () =>
+                                    _showAddProjectSheet(context),
+                              )
+                            : Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  12,
+                                  12,
+                                  12,
+                                  80,
+                                ),
+                                child: GridView.builder(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 2,
+                                        mainAxisSpacing: 12,
+                                        crossAxisSpacing: 12,
+                                        childAspectRatio: 0.9,
+                                      ),
+                                  itemCount: filtered.length,
+                                  itemBuilder: (context, index) {
+                                    final project = filtered[index];
+                                    return _ProjectCard(
+                                      project: project,
+                                      indicatorColor: _priorityColor(
+                                        project.priority,
+                                        cs,
+                                      ),
+                                      dueDate: _formatDueDate(project.dueDate),
+                                      onTap: () =>
+                                          context.go('/project/${project.id}'),
+                                    );
+                                  },
+                                ),
+                              ),
+                      ),
+                      Positioned(
+                        right: 16,
+                        bottom: 16,
+                        child: GestureDetector(
+                          onTap: () => _showAddProjectSheet(context),
+                          child: Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: AppColors.brandGradient,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: cs.primary.withValues(alpha: 0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.add_rounded,
+                              color: Colors.white,
+                              size: 24,
                             ),
                           ),
+                        ),
+                      ),
+                    ],
                   );
                 }
 
                 // Initial state — show empty with shimmer feel
-                return RefreshIndicator(
-                  color: cs.primary,
-                  onRefresh: () async => _loadProjects(),
-                  child: _EmptyState(
-                    cs: cs,
-                    selectedTab: 0,
-                    onAddProject: () => _showAddProjectSheet(context),
-                  ),
+                // Initial state — show loader while projects load
+                return Center(
+                  child: CircularProgressIndicator(color: cs.primary),
                 );
               },
             ),
@@ -463,7 +497,7 @@ class _AddProjectSheetState extends State<_AddProjectSheet> {
 
     return BlocListener<ProjectBloc, ProjectState>(
       listener: (context, state) {
-        if (state is ProjectOperationSuccess) {
+        if (state is ProjectsLoaded) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

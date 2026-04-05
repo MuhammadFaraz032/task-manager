@@ -39,6 +39,7 @@ class ProjectCreateRequested extends ProjectEvent {
 
 class ProjectUpdateRequested extends ProjectEvent {
   final String projectId;
+  final String workspaceId; // ← add
   final String name;
   final String description;
   final ProjectStatus status;
@@ -47,26 +48,23 @@ class ProjectUpdateRequested extends ProjectEvent {
 
   const ProjectUpdateRequested({
     required this.projectId,
+    required this.workspaceId, // ← add
     required this.name,
     required this.description,
     required this.status,
     required this.priority,
     this.dueDate,
   });
-
-  @override
-  List<Object?> get props => [projectId, name, description];
 }
 
 class ProjectDeleteRequested extends ProjectEvent {
   final String projectId;
+  final String workspaceId; // ← add
   final String deletedBy;
 
   const ProjectDeleteRequested({
     required this.projectId,
+    required this.workspaceId, // ← add
     required this.deletedBy,
   });
-
-  @override
-  List<Object?> get props => [projectId, deletedBy];
 }

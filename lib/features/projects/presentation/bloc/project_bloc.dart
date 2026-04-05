@@ -23,11 +23,11 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
     required CreateProjectUseCase createProjectUseCase,
     required UpdateProjectUseCase updateProjectUseCase,
     required DeleteProjectUseCase deleteProjectUseCase,
-  })  : _getProjectsUseCase = getProjectsUseCase,
-        _createProjectUseCase = createProjectUseCase,
-        _updateProjectUseCase = updateProjectUseCase,
-        _deleteProjectUseCase = deleteProjectUseCase,
-        super(const ProjectInitial()) {
+  }) : _getProjectsUseCase = getProjectsUseCase,
+       _createProjectUseCase = createProjectUseCase,
+       _updateProjectUseCase = updateProjectUseCase,
+       _deleteProjectUseCase = deleteProjectUseCase,
+       super(const ProjectInitial()) {
     on<ProjectsLoadRequested>(_onProjectsLoadRequested);
     on<ProjectCreateRequested>(_onProjectCreateRequested);
     on<ProjectUpdateRequested>(_onProjectUpdateRequested);
@@ -71,10 +71,7 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
         priority: event.priority,
         dueDate: event.dueDate,
       );
-      // LEARNING: No need to emit ProjectsLoaded here
-      // Firestore stream automatically emits the updated
-      // list via emit.forEach above
-      emit(const ProjectOperationSuccess('Project created'));
+      // ← Remove emit(ProjectOperationSuccess) here
     } catch (e) {
       emit(ProjectError(e.toString()));
     }
@@ -87,13 +84,18 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
     try {
       await _updateProjectUseCase.execute(
         projectId: event.projectId,
+        workspaceId: event.workspaceId,
         name: event.name,
         description: event.description,
         status: event.status,
         priority: event.priority,
         dueDate: event.dueDate,
       );
-      emit(const ProjectOperationSuccess('Project updated'));
+      // LEARNING: Don't emit ProjectOperationSuccess here
+      // because emit.forEach is still running the stream
+      // emitting a different state interrupts it
+      // The stream will automatically emit ProjectsLoaded
+      // with the updated data via Firestore real-time update
     } catch (e) {
       emit(ProjectError(e.toString()));
     }
@@ -106,17 +108,12 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
     try {
       await _deleteProjectUseCase.execute(
         projectId: event.projectId,
+        workspaceId: event.workspaceId,
         deletedBy: event.deletedBy,
       );
-      emit(const ProjectOperationSuccess('Project deleted'));
+      // No emit needed — Firestore stream handles the update
     } catch (e) {
       emit(ProjectError(e.toString()));
     }
-  }
-
-  @override
-  Future<void> close() {
-    _projectsSubscription?.cancel();
-    return super.close();
   }
 }

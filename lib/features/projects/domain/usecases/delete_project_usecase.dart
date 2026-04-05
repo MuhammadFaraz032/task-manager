@@ -5,13 +5,15 @@ class DeleteProjectUseCase {
 
   DeleteProjectUseCase(this._repository);
 
-  Future<void> execute({
-    required String projectId,
-    required String deletedBy,
-  }) {
-    return _repository.deleteProject(
-      projectId: projectId,
-      deletedBy: deletedBy,
-    );
-  }
+ Future<void> execute({
+  required String projectId,
+  required String workspaceId, // ← add
+  required String deletedBy,
+}) {
+  return _repository.deleteProject(
+    projectId: projectId,
+    workspaceId: workspaceId, // ← add
+    deletedBy: deletedBy,
+  );
+}
 }
