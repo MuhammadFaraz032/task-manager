@@ -36,8 +36,8 @@ class ComingSoon extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            const Color(0xFF2563EB).withOpacity(0.2),
-                            const Color(0xFF8B5CF6).withOpacity(0.2),
+                            const Color(0xFF2563EB).withValues(alpha: 0.2),
+                            const Color(0xFF8B5CF6).withValues(alpha: 0.2),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -126,7 +126,7 @@ class ComingSoon extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: isDark 
-                      ? const Color(0xFF1E293B).withOpacity(0.5)
+                      ? const Color(0xFF1E293B).withValues(alpha: 0.5)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(

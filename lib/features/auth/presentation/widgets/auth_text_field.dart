@@ -35,7 +35,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
         Text(
           widget.label,
           style: TextStyle(
-            color: cs.onSurface.withOpacity(0.8),
+            color: cs.onSurface.withValues(alpha: 0.8),
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -48,7 +48,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
           style: TextStyle(color: cs.onSurface),
           decoration: InputDecoration(
             hintText: widget.hint,
-            hintStyle: TextStyle(color: cs.onSurface.withOpacity(0.4)),
+            hintStyle: TextStyle(color: cs.onSurface.withValues(alpha: 0.4)),
             filled: true,
             fillColor: cs.surface,
             border: OutlineInputBorder(
@@ -73,13 +73,13 @@ class _AuthTextFieldState extends State<AuthTextField> {
             ),
             prefixIcon: Icon(
               widget.icon,
-              color: cs.onSurface.withOpacity(0.5),
+              color: cs.onSurface.withValues(alpha: 0.5),
             ),
             suffixIcon: widget.isPassword
                 ? IconButton(
                     icon: Icon(
                       _obscure ? Icons.visibility_off : Icons.visibility,
-                      color: cs.onSurface.withOpacity(0.5),
+                      color: cs.onSurface.withValues(alpha: 0.5),
                     ),
                     onPressed: () => setState(() => _obscure = !_obscure),
                   )

@@ -6,6 +6,11 @@ import 'package:task_manager/features/auth/domain/entities/user_entity.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_event.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
+import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
+import 'package:task_manager/features/projects/presentation/bloc/project_state.dart';
+import 'package:task_manager/features/tasks/domain/entities/task_entity.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/task_state.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -213,44 +218,68 @@ class _ProfileView extends StatelessWidget {
                 ),
 
                 /// Stats Grid
+                /// Stats Grid
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.only(bottom: 32),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          label: "Projects",
-                          value: "0",
-                          gradient: LinearGradient(
-                            colors: [cs.primary, cs.primary],
+                  child: Builder(
+                    builder: (context) {
+                      // Read real counts from blocs
+                      final projectState = context.watch<ProjectBloc>().state;
+                      final taskState = context.watch<TaskBloc>().state;
+
+                      final projectCount = projectState is ProjectsLoaded
+                          ? projectState.projects.length
+                          : 0;
+
+                      final tasks = taskState is TasksLoaded
+                          ? taskState.tasks
+                          : <TaskEntity>[];
+                      final taskCount = tasks.length;
+                      final completedCount = tasks
+                          .where((t) => t.status == TaskStatus.completed)
+                          .length;
+                      final score = taskCount == 0
+                          ? '0%'
+                          : '${((completedCount / taskCount) * 100).round()}%';
+
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                              context,
+                              label: "Projects",
+                              value: '$projectCount',
+                              gradient: LinearGradient(
+                                colors: [cs.primary, cs.primary],
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          label: "Tasks",
-                          value: "0",
-                          gradient: LinearGradient(
-                            colors: [cs.secondary, cs.primary],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              context,
+                              label: "Tasks",
+                              value: '$taskCount',
+                              gradient: LinearGradient(
+                                colors: [cs.secondary, cs.primary],
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          context,
-                          label: "Score",
-                          value: "0%",
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF3B82F6), Color(0xFFA855F7)],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              context,
+                              label: "Score",
+                              value: score,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF3B82F6), Color(0xFFA855F7)],
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    ],
+                        ],
+                      );
+                    },
                   ),
                 ),
 

@@ -312,19 +312,19 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final authState = context.read<AuthBloc>().state;
     final cs = Theme.of(context).colorScheme;
 
-    print('🔵 workspaceState: $workspaceState');
-    print('🔵 authState: $authState');
+    // print('🔵 workspaceState: $workspaceState');
+    // print('🔵 authState: $authState');
 
     if (workspaceState is! WorkspaceLoaded) {
-      print('❌ Workspace not loaded — returning');
+      // print('❌ Workspace not loaded — returning');
       return;
     }
     if (authState is! AuthAuthenticated) {
-      print('❌ Auth not authenticated — returning');
+      // print('❌ Auth not authenticated — returning');
       return;
     }
 
-    print('✅ Opening add project sheet');
+    // print('✅ Opening add project sheet');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -682,12 +682,12 @@ class _AddProjectSheetState extends State<_AddProjectSheet> {
                         onPressed: isLoading
                             ? null
                             : () {
-                                print('🔵 Create button tapped');
-                                print(
-                                  '🔵 Name: ${_nameController.text.trim()}',
-                                );
+                                // print('🔵 Create button tapped');
+                                // print(
+                                //   '🔵 Name: ${_nameController.text.trim()}',
+                                // );
                                 if (_nameController.text.trim().isEmpty) return;
-                                print('🔵 Firing ProjectCreateRequested');
+                                // print('🔵 Firing ProjectCreateRequested');
                                 context.read<ProjectBloc>().add(
                                   ProjectCreateRequested(
                                     name: _nameController.text.trim(),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:task_manager/core/theme/themecolors.dart';
+import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
 
 class DashboardAppBar extends StatelessWidget {
   const DashboardAppBar({super.key});
@@ -36,43 +39,46 @@ class DashboardAppBar extends StatelessWidget {
                     color: cs.surface,
                     child: Icon(
                       Icons.person,
-                      color: cs.onSurface.withOpacity(0.6),
+                      color: cs.onSurface.withValues(alpha: 0.6),
                       size: 20,
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome back,',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurface.withOpacity(0.5),
-                    ),
-                  ),
-                  Text(
-                    // TODO: Replace with AuthBloc user name in Step 5
-                    'Alex Johnson',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                ],
+              BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, state) {
+                  String displayName = 'User';
+                  if (state is AuthAuthenticated) {
+                    displayName = state.user.fullName.split(' ').first;
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome back,',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      Text(
+                        displayName,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
           Row(
             children: [
-              _ActionButton(
-                icon: Icons.search_rounded,
-                onTap: () {},
-                cs: cs,
-              ),
+              _ActionButton(icon: Icons.search_rounded, onTap: () {}, cs: cs),
               const SizedBox(width: 8),
               _NotificationButton(cs: cs),
             ],
@@ -107,11 +113,7 @@ class _ActionButton extends StatelessWidget {
           color: cs.surface,
           border: Border.all(color: cs.outline),
         ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: cs.onSurface.withOpacity(0.6),
-        ),
+        child: Icon(icon, size: 20, color: cs.onSurface.withValues(alpha: 0.6)),
       ),
     );
   }
@@ -140,7 +142,7 @@ class _NotificationButton extends StatelessWidget {
             child: Icon(
               Icons.notifications_rounded,
               size: 20,
-              color: cs.onSurface.withOpacity(0.6),
+              color: cs.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ),

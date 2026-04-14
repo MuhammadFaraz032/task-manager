@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:task_manager/core/theme/themecolors.dart';
+import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
+import 'package:task_manager/features/projects/presentation/bloc/project_state.dart';
+import 'package:task_manager/features/tasks/domain/entities/task_entity.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/task_state.dart';
 
 class StatsGrid extends StatelessWidget {
   const StatsGrid({super.key});
@@ -8,50 +14,73 @@ class StatsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return Row(
+    // Get projects count
+    final projectState = context.watch<ProjectBloc>().state;
+    final totalProjects = projectState is ProjectsLoaded
+        ? projectState.projects.where((p) => !p.isDeleted).length
+        : 0;
+
+    // Get tasks counts
+    final taskState = context.watch<TaskBloc>().state;
+    int totalTasks = 0;
+    int pendingTasks = 0;
+    int completedTasks = 0;
+
+    if (taskState is TasksLoaded) {
+      totalTasks = taskState.tasks.length;
+      pendingTasks = taskState.tasks
+          .where((t) => t.status != TaskStatus.completed)
+          .length;
+      completedTasks = taskState.tasks
+          .where((t) => t.status == TaskStatus.completed)
+          .length;
+    }
+
+    // 2 columns x 2 rows layout
+    return Column(
       children: [
-        Expanded(
-          child: StatCard(
-            title: 'Total',
-            value: '12',
-            bottomText: '+2 new',
-            bottomTextColor: AppColors.success,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: StatCard(
-            title: 'Pending',
-            value: '08',
-            child: Container(
-              margin: const EdgeInsets.only(top: 8),
-              width: double.infinity,
-              height: 4,
-              decoration: BoxDecoration(
-                color: cs.outline,
-                borderRadius: BorderRadius.circular(32),
-              ),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: 0.67,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.warning,
-                    borderRadius: BorderRadius.circular(32),
-                  ),
-                ),
+        Row(
+          children: [
+            Expanded(
+              child: StatCard(
+                title: 'Projects',
+                value: '$totalProjects',
+                bottomText: 'Active projects',
+                bottomTextColor: cs.primary,
               ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StatCard(
+                title: 'Total Tasks',
+                value: '$totalTasks',
+                bottomText: 'All tasks',
+                bottomTextColor: cs.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: StatCard(
-            title: 'Done',
-            value: '45',
-            bottomText: 'Top 5%',
-            bottomTextColor: cs.primary,
-          ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: StatCard(
+                title: 'Pending',
+                value: '$pendingTasks',
+                bottomText: 'Need attention',
+                bottomTextColor: AppColors.warning,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StatCard(
+                title: 'Completed',
+                value: '$completedTasks',
+                bottomText: 'Done!',
+                bottomTextColor: AppColors.success,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -94,7 +123,7 @@ class StatCard extends StatelessWidget {
               fontSize: 10,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.5,
-              color: cs.onSurface.withOpacity(0.5),
+              color: cs.onSurface.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 4),

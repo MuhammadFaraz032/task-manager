@@ -18,10 +18,10 @@ class WorkspaceCubit extends Cubit<WorkspaceState> {
   Future<void> loadWorkspace({required String ownerId}) async {
     emit(const WorkspaceLoading());
     try {
-      print('🔵 WorkspaceCubit loading workspace for: $ownerId');
+      // print('🔵 WorkspaceCubit loading workspace for: $ownerId');
       final workspace = await _getWorkspaceUseCase.execute(ownerId: ownerId);
       if (workspace != null) {
-        print('✅ WorkspaceCubit loaded: ${workspace.id}');
+        // print('✅ WorkspaceCubit loaded: ${workspace.id}');
         emit(WorkspaceLoaded(workspace));
       } else {
         emit(const WorkspaceError('Workspace not found'));
@@ -30,21 +30,6 @@ class WorkspaceCubit extends Cubit<WorkspaceState> {
       emit(WorkspaceError(e.toString()));
     }
   }
-  // Future<void> loadWorkspace({required String ownerId}) async {
-  //   emit(const WorkspaceLoading());
-  //   try {
-  //     final workspace = await _getWorkspaceUseCase.execute(
-  //       ownerId: ownerId,
-  //     );
-  //     if (workspace != null) {
-  //       emit(WorkspaceLoaded(workspace));
-  //     } else {
-  //       emit(const WorkspaceError('Workspace not found'));
-  //     }
-  //   } catch (e) {
-  //     emit(WorkspaceError(e.toString()));
-  //   }
-  // }
 
   // Called after register — create new workspace
   Future<void> createWorkspace({
@@ -53,15 +38,15 @@ class WorkspaceCubit extends Cubit<WorkspaceState> {
   }) async {
     emit(const WorkspaceLoading());
     try {
-      print('🔵 Creating workspace: $name for $ownerId');
+      // print('🔵 Creating workspace: $name for $ownerId');
       final workspace = await _createWorkspaceUseCase.execute(
         name: name,
         ownerId: ownerId,
       );
-      print('✅ Workspace created: ${workspace.id}');
+      // print('✅ Workspace created: ${workspace.id}');
       emit(WorkspaceLoaded(workspace));
     } catch (e) {
-      print('❌ Workspace error: $e');
+      // print('❌ Workspace error: $e');
       emit(WorkspaceError(e.toString()));
     }
   }

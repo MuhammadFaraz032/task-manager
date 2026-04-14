@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:task_manager/core/theme/themecolors.dart';
+import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
+import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
+import 'package:task_manager/features/projects/presentation/bloc/project_state.dart';
+import 'package:task_manager/features/tasks/domain/entities/task_entity.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/task_event.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/task_state.dart';
 import 'package:task_manager/features/tasks/presentation/pages/add_task_page.dart';
+import 'package:task_manager/features/workspace/presentation/cubit/workspace_cubit.dart';
+// import 'package:task_manager/features/workspace/presentation/cubit/workspace_cubit.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -10,283 +21,193 @@ class TasksScreen extends StatefulWidget {
   State<TasksScreen> createState() => _TasksScreenState();
 }
 
-class _TasksScreenState extends State<TasksScreen> {
-  int _selectedFilter = 0;
-  final List<String> _filters = ['All', 'Today', 'Standalone', 'By Project'];
+class _TasksScreenState extends State<TasksScreen>
+    with SingleTickerProviderStateMixin {
+  int _selectedFilter = 0; // 0=All, 1=Standalone, 2=Project Tasks
+  int _selectedTabIndex = 0; // 0=Todo, 1=Completed  ← ADD THIS LINE
+  final List<String> _filters = ['All', 'Standalone', 'Project Tasks'];
 
-  // TODO: Replace with TaskBloc data
-  final List<_TaskData> _tasks = [
-    _TaskData(
-      title: 'Design System Audit',
-      projectName: 'Website Redesign',
-      projectColor: Color(0xFF2563EB),
-      priority: 'HIGH',
-      priorityColor: Color(0xFFEF4444),
-      dueDate: 'Overdue',
-      dueDateColor: Color(0xFFEF4444),
-      isStandalone: false,
-      isCompleted: false,
-    ),
-    _TaskData(
-      title: 'Submit Timesheet',
-      projectName: null,
-      projectColor: null,
-      priority: 'MED',
-      priorityColor: Color(0xFFF59E0B),
-      dueDate: 'Today',
-      dueDateColor: Color(0xFFF59E0B),
-      isStandalone: true,
-      isCompleted: false,
-    ),
-    _TaskData(
-      title: 'User Testing Sessions',
-      projectName: 'Mobile App Q4',
-      projectColor: Color(0xFF8B5CF6),
-      priority: 'MED',
-      priorityColor: Color(0xFFF59E0B),
-      dueDate: 'Tomorrow',
-      dueDateColor: null,
-      isStandalone: false,
-      isCompleted: false,
-    ),
-    _TaskData(
-      title: 'Call the Client',
-      projectName: null,
-      projectColor: null,
-      priority: 'HIGH',
-      priorityColor: Color(0xFFEF4444),
-      dueDate: 'Today',
-      dueDateColor: Color(0xFFF59E0B),
-      isStandalone: true,
-      isCompleted: false,
-    ),
-    _TaskData(
-      title: 'Homepage Wireframes',
-      projectName: 'Website Redesign',
-      projectColor: Color(0xFF2563EB),
-      priority: 'LOW',
-      priorityColor: Color(0xFF10B981),
-      dueDate: 'Nov 30',
-      dueDateColor: null,
-      isStandalone: false,
-      isCompleted: false,
-    ),
-    _TaskData(
-      title: 'Buy Office Supplies',
-      projectName: null,
-      projectColor: null,
-      priority: 'LOW',
-      priorityColor: Color(0xFF10B981),
-      dueDate: 'Dec 1',
-      dueDateColor: null,
-      isStandalone: true,
-      isCompleted: true,
-    ),
-    _TaskData(
-      title: 'Brand Identity System',
-      projectName: 'Brand Identity',
-      projectColor: Color(0xFFF97316),
-      priority: 'LOW',
-      priorityColor: Color(0xFF10B981),
-      dueDate: 'Done',
-      dueDateColor: null,
-      isStandalone: false,
-      isCompleted: true,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadTasks();
+      // GoRouter.of(context).routerDelegate.addListener(_onRouteChange);
+    });
+  }
 
-  List<_TaskData> get _filteredTasks {
-    switch (_selectedFilter) {
-      case 1: // Today
-        return _tasks
-            .where(
-              (t) =>
-                  !t.isCompleted &&
-                  (t.dueDate == 'Today' || t.dueDate == 'Overdue'),
-            )
-            .toList();
-      case 2: // Standalone
-        return _tasks.where((t) => t.isStandalone).toList();
-      case 3: // By Project
-        return _tasks.where((t) => !t.isStandalone).toList();
-      default: // All
-        return _tasks;
+  void _loadTasks() {
+    // print('🟢 LOAD TASKS CALLED');
+    final workspaceId = context.read<WorkspaceCubit>().currentWorkspaceId;
+    // print('🟢 workspaceId = $workspaceId');
+    if (workspaceId != null) {
+      // print('🟢 Dispatching TasksLoadRequested');
+      context.read<TaskBloc>().add(
+        TasksLoadRequested(workspaceId: workspaceId),
+      );
     }
   }
 
-  List<_TaskData> get _pendingTasks =>
-      _filteredTasks.where((t) => !t.isCompleted).toList();
+  // void _onRouteChange() {
+  //   if (mounted) _loadTasks();
+  // }
 
-  List<_TaskData> get _completedTasks =>
-      _filteredTasks.where((t) => t.isCompleted).toList();
+  @override
+  void dispose() {
+    // GoRouter.of(context).routerDelegate.removeListener(_onRouteChange);
+    // _tabController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildTaskList(
+    ColorScheme cs,
+    TaskState taskState,
+    List<TaskEntity> tasks,
+    Map<String, String> projectNames,
+  ) {
+    if (taskState is TaskLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (tasks.isEmpty) {
+      return _EmptyState(cs: cs);
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        final projectName = task.projectId != null
+            ? projectNames[task.projectId]
+            : null;
+        return _TaskCard(
+          cs: cs,
+          task: task,
+          projectName: projectName,
+          onToggle: () {
+            final authState = context.read<AuthBloc>().state;
+            if (authState is AuthAuthenticated) {
+              context.read<TaskBloc>().add(
+                TaskToggleRequested(
+                  taskId: task.id,
+                  completedBy: authState.user.uid,
+                ),
+              );
+            }
+          },
+          onTap: () => context.push('/task/${task.id}'),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: cs.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            /// ── Header ───────────────────────────────
-            _TasksHeader(cs: cs),
+    return BlocBuilder<TaskBloc, TaskState>(
+      builder: (context, taskState) {
+        // Build project name lookup from ProjectBloc
+        final projectState = context.watch<ProjectBloc>().state;
+        final projectNames = <String, String>{};
+        if (projectState is ProjectsLoaded) {
+          for (final p in projectState.projects) {
+            projectNames[p.id] = p.name;
+          }
+        }
 
-            /// ── Filter Chips ─────────────────────────
-            _FilterChips(
-              cs: cs,
-              filters: _filters,
-              selectedIndex: _selectedFilter,
-              onSelected: (index) => setState(() => _selectedFilter = index),
+        // Get tasks from state
+        final allTasks = taskState is TasksLoaded
+            ? taskState.tasks
+            : <TaskEntity>[];
+
+        // Apply dropdown filter (All / Standalone / Project Tasks)
+        final dropdownFiltered = switch (_selectedFilter) {
+          1 => allTasks.where((t) => t.projectId == null).toList(),
+          2 => allTasks.where((t) => t.projectId != null).toList(),
+          _ => List<TaskEntity>.from(allTasks),
+        };
+
+        // Apply tab filter (Todo / Completed)
+        // Apply tab filter (Todo / Completed) using _selectedTabIndex
+        final tabFiltered = _selectedTabIndex == 0
+            ? dropdownFiltered
+                  .where((t) => t.status == TaskStatus.todo)
+                  .toList()
+            : dropdownFiltered
+                  .where((t) => t.status == TaskStatus.completed)
+                  .toList();
+
+        return Scaffold(
+          backgroundColor: cs.background,
+          body: SafeArea(
+            child: Column(
+              children: [
+                _TasksHeader(
+                  cs: cs,
+                  selectedFilter: _selectedFilter,
+                  filters: _filters,
+                  onFilterChanged: (index) =>
+                      setState(() => _selectedFilter = index),
+                  selectedTabIndex: _selectedTabIndex,
+                  onTabChanged: (index) =>
+                      setState(() => _selectedTabIndex = index),
+                ),
+                Expanded(
+                  child: _buildTaskList(
+                    cs,
+                    taskState,
+                    tabFiltered,
+                    projectNames,
+                  ),
+                ),
+              ],
             ),
-
-            /// ── Task List ────────────────────────────
-            Expanded(
-              child: _filteredTasks.isEmpty
-                  ? _EmptyState(cs: cs)
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                      children: [
-                        /// Standalone section header
-                        if (_selectedFilter == 0 &&
-                            _pendingTasks.any((t) => t.isStandalone)) ...[
-                          _SectionHeader(
-                            cs: cs,
-                            label: 'STANDALONE',
-                            count: _pendingTasks
-                                .where((t) => t.isStandalone)
-                                .length,
-                          ),
-                          const SizedBox(height: 8),
-                          ..._pendingTasks
-                              .where((t) => t.isStandalone)
-                              .map(
-                                (task) => _TaskCard(
-                                  cs: cs,
-                                  task: task,
-                                  onToggle: () => setState(
-                                    () => task.isCompleted = !task.isCompleted,
-                                  ),
-                                ),
-                              ),
-                          const SizedBox(height: 16),
-                        ],
-
-                        /// Project tasks section header
-                        if (_selectedFilter == 0 &&
-                            _pendingTasks.any((t) => !t.isStandalone)) ...[
-                          _SectionHeader(
-                            cs: cs,
-                            label: 'PROJECT TASKS',
-                            count: _pendingTasks
-                                .where((t) => !t.isStandalone)
-                                .length,
-                          ),
-                          const SizedBox(height: 8),
-                          ..._pendingTasks
-                              .where((t) => !t.isStandalone)
-                              .map(
-                                (task) => _TaskCard(
-                                  cs: cs,
-                                  task: task,
-                                  onToggle: () => setState(
-                                    () => task.isCompleted = !task.isCompleted,
-                                  ),
-                                ),
-                              ),
-                          const SizedBox(height: 16),
-                        ],
-
-                        /// Filtered view — no section split
-                        if (_selectedFilter != 0) ...[
-                          ..._pendingTasks.map(
-                            (task) => _TaskCard(
-                              cs: cs,
-                              task: task,
-                              onToggle: () => setState(
-                                () => task.isCompleted = !task.isCompleted,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-
-                        /// Completed Section
-                        if (_completedTasks.isNotEmpty) ...[
-                          _SectionHeader(
-                            cs: cs,
-                            label: 'COMPLETED',
-                            count: _completedTasks.length,
-                          ),
-                          const SizedBox(height: 8),
-                          ..._completedTasks.map(
-                            (task) => _TaskCard(
-                              cs: cs,
-                              task: task,
-                              onToggle: () => setState(
-                                () => task.isCompleted = !task.isCompleted,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-            ),
-          ],
-        ),
-      ),
-
-      /// FAB — Add Task
-      floatingActionButton: _AddTaskFAB(cs: cs),
+          ),
+          floatingActionButton: _AddTaskFAB(cs: cs),
+        );
+      },
     );
   }
 }
 
 // ─────────────────────────────────────────────
-// TASK DATA MODEL — temporary until TaskBloc
+// HEADER WITH TABS
 // ─────────────────────────────────────────────
-class _TaskData {
-  final String title;
-  final String? projectName;
-  final Color? projectColor;
-  final String priority;
-  final Color priorityColor;
-  final String dueDate;
-  final Color? dueDateColor;
-  final bool isStandalone;
-  bool isCompleted;
-
-  _TaskData({
-    required this.title,
-    required this.projectName,
-    required this.projectColor,
-    required this.priority,
-    required this.priorityColor,
-    required this.dueDate,
-    required this.dueDateColor,
-    required this.isStandalone,
-    required this.isCompleted,
-  });
-}
-
 // ─────────────────────────────────────────────
-// HEADER
+// HEADER WITH CUSTOM TABS
 // ─────────────────────────────────────────────
 class _TasksHeader extends StatelessWidget {
   final ColorScheme cs;
+  final int selectedFilter;
+  final List<String> filters;
+  final ValueChanged<int> onFilterChanged;
+  final int selectedTabIndex;
+  final ValueChanged<int> onTabChanged;
 
-  const _TasksHeader({required this.cs});
+  const _TasksHeader({
+    required this.cs,
+    required this.selectedFilter,
+    required this.filters,
+    required this.onFilterChanged,
+    required this.selectedTabIndex,
+    required this.onTabChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final tabs = ['Todo', 'Completed'];
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
       decoration: BoxDecoration(
-        color: cs.background,
+        color: cs.surface,
         border: Border(bottom: BorderSide(color: cs.outline)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Top row: Title + Action buttons
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -303,12 +224,54 @@ class _TasksHeader extends StatelessWidget {
                 children: [
                   _HeaderButton(icon: Icons.search_rounded, cs: cs),
                   const SizedBox(width: 8),
-                  _HeaderButton(icon: Icons.filter_list_rounded, cs: cs),
+                  _FilterDropdownButton(
+                    cs: cs,
+                    selectedIndex: selectedFilter,
+                    filters: filters,
+                    onSelected: onFilterChanged,
+                  ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
+
+          // Custom Tab Bar (horizontal scrollable)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(tabs.length, (index) {
+                final isSelected = selectedTabIndex == index;
+                return GestureDetector(
+                  onTap: () => onTabChanged(index),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 24),
+                    padding: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: isSelected ? cs.primary : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      tabs[index],
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        color: isSelected
+                            ? cs.primary
+                            : cs.onSurface.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
         ],
       ),
     );
@@ -318,7 +281,6 @@ class _TasksHeader extends StatelessWidget {
 class _HeaderButton extends StatelessWidget {
   final IconData icon;
   final ColorScheme cs;
-
   const _HeaderButton({required this.icon, required this.cs});
 
   @override
@@ -334,126 +296,103 @@ class _HeaderButton extends StatelessWidget {
           color: cs.surface,
           border: Border.all(color: cs.outline),
         ),
-        child: Icon(icon, size: 18, color: cs.onSurface.withOpacity(0.6)),
+        child: Icon(icon, size: 18, color: cs.onSurface.withValues(alpha: 0.6)),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────
-// FILTER CHIPS
-// ─────────────────────────────────────────────
-class _FilterChips extends StatelessWidget {
+// // ─────────────────────────────────────────────
+// // DROPDOWN FILTER
+// // ─────────────────────────────────────────────
+
+class _FilterDropdownButton extends StatelessWidget {
   final ColorScheme cs;
-  final List<String> filters;
   final int selectedIndex;
+  final List<String> filters;
   final ValueChanged<int> onSelected;
 
-  const _FilterChips({
+  const _FilterDropdownButton({
     required this.cs,
-    required this.filters,
     required this.selectedIndex,
+    required this.filters,
     required this.onSelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: cs.background,
-        border: Border(bottom: BorderSide(color: cs.outline)),
-      ),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        itemCount: filters.length,
-        itemBuilder: (context, index) {
-          final isSelected = selectedIndex == index;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: InkWell(
-              onTap: () => onSelected(index),
-              borderRadius: BorderRadius.circular(999),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected ? cs.primary.withOpacity(0.1) : cs.surface,
-                  border: Border.all(
-                    color: isSelected
-                        ? cs.primary.withOpacity(0.3)
-                        : cs.outline,
-                  ),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  filters[index],
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected
-                        ? cs.primary
-                        : cs.onSurface.withOpacity(0.5),
+    final activeFilter = filters[selectedIndex];
+    
+    return GestureDetector(
+      onTap: () async {
+        // Get the button's position on screen
+        final RenderBox button = context.findRenderObject() as RenderBox;
+        final Offset offset = button.localToGlobal(Offset.zero);
+        
+        final result = await showMenu<int>(
+          context: context,
+          position: RelativeRect.fromLTRB(
+            offset.dx + button.size.width - 120, // Adjust dropdown position
+            offset.dy + button.size.height,
+            offset.dx,
+            offset.dy,
+          ),
+          items: filters
+              .asMap()
+              .entries
+              .map(
+                (e) => PopupMenuItem<int>(
+                  value: e.key,
+                  child: Row(
+                    children: [
+                      if (e.key == selectedIndex)
+                        Icon(Icons.check_rounded, size: 16, color: cs.primary)
+                      else
+                        const SizedBox(width: 16),
+                      const SizedBox(width: 8),
+                      Text(e.value),
+                    ],
                   ),
                 ),
+              )
+              .toList(),
+        );
+        if (result != null) onSelected(result);
+      },
+      // borderRadius: BorderRadius.circular(30),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          border: Border.all(color: cs.outline),
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.filter_alt_outlined,
+              size: 14,
+              color: cs.primary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              activeFilter,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: cs.primary,
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────
-// SECTION HEADER
-// ─────────────────────────────────────────────
-class _SectionHeader extends StatelessWidget {
-  final ColorScheme cs;
-  final String label;
-  final int count;
-
-  const _SectionHeader({
-    required this.cs,
-    required this.label,
-    required this.count,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-            color: cs.onSurface.withOpacity(0.4),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: cs.outline),
-          ),
-          child: Text(
-            '$count',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: cs.onSurface.withOpacity(0.4),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: cs.primary,
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -463,40 +402,88 @@ class _SectionHeader extends StatelessWidget {
 // ─────────────────────────────────────────────
 class _TaskCard extends StatelessWidget {
   final ColorScheme cs;
-  final _TaskData task;
+  final TaskEntity task;
+  final String? projectName;
   final VoidCallback onToggle;
+  final VoidCallback onTap;
 
   const _TaskCard({
     required this.cs,
     required this.task,
+    required this.projectName,
     required this.onToggle,
+    required this.onTap,
   });
+
+  String get _priorityLabel {
+    switch (task.priority) {
+      case TaskPriority.high:
+        return 'HIGH';
+      case TaskPriority.medium:
+        return 'MED';
+      case TaskPriority.low:
+        return 'LOW';
+      case TaskPriority.none:
+        return '';
+    }
+  }
+
+  Color _priorityColor(ColorScheme cs) {
+    switch (task.priority) {
+      case TaskPriority.high:
+        return const Color(0xFFEF4444);
+      case TaskPriority.medium:
+        return const Color(0xFFF59E0B);
+      case TaskPriority.low:
+        return const Color(0xFF10B981);
+      case TaskPriority.none:
+        return cs.outline;
+    }
+  }
+
+  String get _dueDateLabel {
+    if (task.dueDate == null) return '';
+    final now = DateTime.now();
+    final due = task.dueDate!;
+    final diff = due.difference(DateTime(now.year, now.month, now.day)).inDays;
+    if (diff < 0) return 'Overdue';
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Tomorrow';
+    return '${due.day}/${due.month}';
+  }
+
+  Color _dueDateColor(ColorScheme cs) {
+    if (task.dueDate == null) return cs.onSurface.withValues(alpha: 0.4);
+    final label = _dueDateLabel;
+    if (label == 'Overdue') return const Color(0xFFEF4444);
+    if (label == 'Today') return const Color(0xFFF59E0B);
+    return cs.onSurface.withValues(alpha: 0.4);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isCompleted = task.isCompleted;
+    final priorityColor = _priorityColor(cs);
+    final dueDateColor = _dueDateColor(cs);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
-        onTap: () {
-          // TODO: context.go('/task/${task.id}')
-          context.go('/task/temp');
-        },
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: task.isCompleted ? cs.surface.withOpacity(0.5) : cs.surface,
+            color: isCompleted ? cs.surface.withValues(alpha: 0.5) : cs.surface,
             border: Border.all(
-              color: task.isCompleted
-                  ? cs.outline.withOpacity(0.5)
-                  : cs.outline,
+              color: isCompleted ? cs.outline.withValues(alpha: 0.5) : cs.outline,
             ),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /// Checkbox
+              // Checkbox
               GestureDetector(
                 onTap: onToggle,
                 child: AnimatedContainer(
@@ -505,16 +492,16 @@ class _TaskCard extends StatelessWidget {
                   height: 24,
                   margin: const EdgeInsets.only(top: 2),
                   decoration: BoxDecoration(
-                    color: task.isCompleted ? cs.primary : Colors.transparent,
+                    color: isCompleted ? cs.primary : Colors.transparent,
                     border: Border.all(
-                      color: task.isCompleted
+                      color: isCompleted
                           ? cs.primary
-                          : cs.primary.withOpacity(0.3),
+                          : cs.primary.withValues(alpha: 0.3),
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: task.isCompleted
+                  child: isCompleted
                       ? const Icon(
                           Icons.check_rounded,
                           size: 14,
@@ -526,12 +513,11 @@ class _TaskCard extends StatelessWidget {
 
               const SizedBox(width: 12),
 
-              /// Content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    /// Title + Priority
+                    // Title + Priority
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -541,33 +527,33 @@ class _TaskCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              color: task.isCompleted
-                                  ? cs.onSurface.withOpacity(0.4)
+                              color: isCompleted
+                                  ? cs.onSurface.withValues(alpha: 0.4)
                                   : cs.onSurface,
-                              decoration: task.isCompleted
+                              decoration: isCompleted
                                   ? TextDecoration.lineThrough
                                   : null,
-                              decorationColor: cs.onSurface.withOpacity(0.4),
+                              decorationColor: cs.onSurface.withValues(alpha: 0.4),
                             ),
                           ),
                         ),
-                        if (!task.isCompleted)
+                        if (!isCompleted && _priorityLabel.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: task.priorityColor.withOpacity(0.1),
+                              color: priorityColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              task.priority,
+                              _priorityLabel,
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.5,
-                                color: task.priorityColor,
+                                color: priorityColor,
                               ),
                             ),
                           ),
@@ -576,18 +562,17 @@ class _TaskCard extends StatelessWidget {
 
                     const SizedBox(height: 8),
 
-                    /// Project badge + Due date
+                    // Project badge + Due date
                     Row(
                       children: [
-                        /// Project badge (or standalone label)
-                        if (task.isStandalone)
+                        if (task.projectId == null)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: cs.primary.withOpacity(0.08),
+                              color: cs.primary.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Row(
@@ -596,28 +581,28 @@ class _TaskCard extends StatelessWidget {
                                 Icon(
                                   Icons.person_rounded,
                                   size: 10,
-                                  color: cs.primary.withOpacity(0.7),
+                                  color: cs.primary.withValues(alpha: 0.7),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'Personal',
+                                  'Standalone',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: cs.primary.withOpacity(0.7),
+                                    color: cs.primary.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
                             ),
                           )
-                        else if (task.projectName != null)
+                        else
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: task.projectColor!.withOpacity(0.1),
+                              color: cs.primary.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Row(
@@ -627,17 +612,17 @@ class _TaskCard extends StatelessWidget {
                                   width: 6,
                                   height: 6,
                                   decoration: BoxDecoration(
-                                    color: task.projectColor,
+                                    color: cs.primary,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  task.projectName!,
+                                  projectName ?? 'Project',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: task.projectColor,
+                                    color: cs.primary,
                                   ),
                                 ),
                               ],
@@ -646,29 +631,25 @@ class _TaskCard extends StatelessWidget {
 
                         const Spacer(),
 
-                        /// Due date
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.access_time_rounded,
-                              size: 11,
-                              color:
-                                  task.dueDateColor ??
-                                  cs.onSurface.withOpacity(0.4),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              task.dueDate,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color:
-                                    task.dueDateColor ??
-                                    cs.onSurface.withOpacity(0.4),
+                        if (task.dueDate != null)
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.access_time_rounded,
+                                size: 11,
+                                color: dueDateColor,
                               ),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _dueDateLabel,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: dueDateColor,
+                                ),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
                   ],
@@ -687,7 +668,6 @@ class _TaskCard extends StatelessWidget {
 // ─────────────────────────────────────────────
 class _EmptyState extends StatelessWidget {
   final ColorScheme cs;
-
   const _EmptyState({required this.cs});
 
   @override
@@ -700,13 +680,13 @@ class _EmptyState extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: cs.primary.withOpacity(0.08),
+              color: cs.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.checklist_rounded,
               size: 32,
-              color: cs.primary.withOpacity(0.5),
+              color: cs.primary.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 16),
@@ -723,7 +703,7 @@ class _EmptyState extends StatelessWidget {
             'Tap + to add your first task',
             style: TextStyle(
               fontSize: 14,
-              color: cs.onSurface.withOpacity(0.4),
+              color: cs.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -737,7 +717,6 @@ class _EmptyState extends StatelessWidget {
 // ─────────────────────────────────────────────
 class _AddTaskFAB extends StatelessWidget {
   final ColorScheme cs;
-
   const _AddTaskFAB({required this.cs});
 
   @override
@@ -754,7 +733,7 @@ class _AddTaskFAB extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: cs.primary.withOpacity(0.3),
+            color: cs.primary.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -763,7 +742,6 @@ class _AddTaskFAB extends StatelessWidget {
       child: IconButton(
         icon: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
         onPressed: () {
-          // TODO: Show AddTaskPage as bottom sheet
           showModalBottomSheet(
             context: context,
             isScrollControlled: true,

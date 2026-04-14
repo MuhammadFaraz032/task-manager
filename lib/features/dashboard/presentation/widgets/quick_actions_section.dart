@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:task_manager/features/tasks/presentation/pages/add_task_page.dart';
 
 class QuickActionsSection extends StatelessWidget {
   const QuickActionsSection({super.key});
@@ -11,7 +13,11 @@ class QuickActionsSection extends StatelessWidget {
       children: [
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: () {
+              // Navigate to projects page and open create modal
+              context.push('/projects');
+              // TODO: Auto-open create project bottom sheet
+            },
             icon: const Icon(Icons.add_circle_rounded, size: 20),
             label: const Text('New Project'),
             style: ElevatedButton.styleFrom(
@@ -28,7 +34,24 @@ class QuickActionsSection extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                isDismissible: true,
+                builder: (_) => Container(
+                  height: MediaQuery.of(context).size.height * 0.92,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.background,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                  ),
+                  child: const AddTaskPage(),
+                ),
+              );
+            },
             icon: const Icon(Icons.bolt_rounded, size: 20),
             label: const Text('Quick Task'),
             style: ElevatedButton.styleFrom(

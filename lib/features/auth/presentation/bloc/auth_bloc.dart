@@ -67,21 +67,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
     try {
-      print('🔵 Login started: ${event.email}');
+      // print('🔵 Login started: ${event.email}');
       final user = await _loginUseCase.execute(
         email: event.email,
         password: event.password,
       );
-      print('✅ Login success: ${user.uid}');
+      // print('✅ Login success: ${user.uid}');
 
       // Load workspace — result stored in WorkspaceCubit
       // at app level via main.dart
       await _getWorkspaceUseCase.execute(ownerId: user.uid);
-      print('✅ Workspace loaded for: ${user.uid}');
+      // print('✅ Workspace loaded for: ${user.uid}');
 
       emit(AuthAuthenticated(user));
     } catch (e) {
-      print('❌ Login error: $e');
+      // print('❌ Login error: $e');
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
     }
   }
@@ -92,13 +92,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
     try {
-      print('🔵 Register started: ${event.email}');
+      // print('🔵 Register started: ${event.email}');
       final user = await _registerUseCase.execute(
         fullName: event.fullName,
         email: event.email,
         password: event.password,
       );
-      print('✅ Register success: ${user.uid}');
+      // print('✅ Register success: ${user.uid}');
 
       // LEARNING: Create workspace immediately after register
       // inside the Bloc — not in the UI
@@ -107,11 +107,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         name: "${user.fullName}'s Workspace",
         ownerId: user.uid,
       );
-      print('✅ Workspace created for: ${user.uid}');
+      // print('✅ Workspace created for: ${user.uid}');
 
       emit(AuthAuthenticated(user));
     } catch (e) {
-      print('❌ Register error: $e');
+      // print('❌ Register error: $e');
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
     }
   }
@@ -137,14 +137,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final user = await _getCurrentUserUseCase.execute();
       if (user != null) {
-        print('✅ User already logged in: ${user.uid}');
+        // print('✅ User already logged in: ${user.uid}');
 
         // LEARNING: Load workspace here too
         // because when user is already logged in
         // they skip the login flow entirely
         // so we must load workspace here
         await _getWorkspaceUseCase.execute(ownerId: user.uid);
-        print('✅ Workspace loaded for: ${user.uid}');
+        // print('✅ Workspace loaded for: ${user.uid}');
 
         emit(AuthAuthenticated(user));
       } else {

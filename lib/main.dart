@@ -64,7 +64,7 @@ class MyApp extends StatelessWidget {
           current is AuthAuthenticated && previous is! AuthAuthenticated,
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          print('🟡 MyApp listener — loading workspace for: ${state.user.uid}');
+          // print('🟡 MyApp listener — loading workspace for: ${state.user.uid}');
           context.read<WorkspaceCubit>().loadWorkspace(ownerId: state.user.uid);
         }
       },

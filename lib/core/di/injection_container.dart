@@ -137,7 +137,7 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton(() => DeleteProjectUseCase(getIt()));
 
   // Bloc — Factory because it has screen state
-  getIt.registerFactory(
+  getIt.registerLazySingleton(
     () => ProjectBloc(
       getProjectsUseCase: getIt(),
       createProjectUseCase: getIt(),
@@ -168,7 +168,7 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton(() => DeleteTaskUseCase(getIt()));
 
   // Bloc
-  getIt.registerFactory(
+  getIt.registerLazySingleton(
     () => TaskBloc(
       getTasksUseCase: getIt(),
       createTaskUseCase: getIt(),

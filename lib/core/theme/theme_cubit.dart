@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+// import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme_state.dart';
@@ -26,7 +26,7 @@ class ThemeCubit extends Cubit<ThemeState> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isDarkMode', isDarkMode);
     } catch (e) {
-      debugPrint('Error saving theme: $e');
+      // debugPrint('Error saving theme: $e');
     }
   }
 

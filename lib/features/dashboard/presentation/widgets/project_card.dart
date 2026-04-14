@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:task_manager/core/theme/themecolors.dart';
+import 'package:task_manager/features/projects/domain/entities/project_entity.dart';
+import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
+import 'package:task_manager/features/projects/presentation/bloc/project_state.dart';
 
 class RecentProjectsSection extends StatefulWidget {
   const RecentProjectsSection({super.key});
@@ -11,7 +16,6 @@ class RecentProjectsSection extends StatefulWidget {
 class _RecentProjectsSectionState extends State<RecentProjectsSection> {
   final ScrollController _scrollController = ScrollController();
   int _centeredIndex = 0;
-  static const int _projectCount = 2;
 
   @override
   void initState() {
@@ -34,7 +38,12 @@ class _RecentProjectsSectionState extends State<RecentProjectsSection> {
     const padding = 16.0;
     final centerOfScreen = screenWidth / 2;
 
-    for (int i = 0; i < _projectCount; i++) {
+    final projectState = context.read<ProjectBloc>().state;
+    final projects = projectState is ProjectsLoaded
+        ? projectState.projects.where((p) => !p.isDeleted).take(3).toList()
+        : [];
+
+    for (int i = 0; i < projects.length; i++) {
       final cardStart = i * (cardWidth + padding) - scrollOffset + 8;
       final cardCenter = cardStart + cardWidth / 2;
       if ((cardCenter - centerOfScreen).abs() < 100) {
@@ -49,6 +58,15 @@ class _RecentProjectsSectionState extends State<RecentProjectsSection> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final projectState = context.watch<ProjectBloc>().state;
+
+    List<ProjectEntity> recentProjects = [];
+    if (projectState is ProjectsLoaded) {
+      recentProjects = projectState.projects
+          .where((p) => !p.isDeleted)
+          .take(3)
+          .toList();
+    }
 
     return Column(
       children: [
@@ -64,7 +82,7 @@ class _RecentProjectsSectionState extends State<RecentProjectsSection> {
               ),
             ),
             TextButton(
-              onPressed: () {},
+              onPressed: () => context.push('/projects'),
               child: Text(
                 'View All',
                 style: TextStyle(
@@ -77,204 +95,252 @@ class _RecentProjectsSectionState extends State<RecentProjectsSection> {
           ],
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          height: 200,
-          child: ListView.builder(
-            controller: _scrollController,
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            itemCount: _projectCount,
-            itemBuilder: (context, index) {
-              final isHighlighted = index == _centeredIndex;
-              return Container(
-                width: 260,
-                margin: EdgeInsets.only(
-                  right: index < _projectCount - 1 ? 16 : 0,
+        if (recentProjects.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: cs.outline),
+            ),
+            child: Center(
+              child: Text(
+                'No projects yet.\nTap + to create one.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: cs.onSurface.withValues(alpha: 0.5),
                 ),
-                child: ProjectCard(
-                  icon: index == 0 ? Icons.animation : Icons.campaign,
-                  category: index == 0 ? 'Design' : 'Marketing',
-                  title: index == 0 ? 'Mobile App UI' : 'Launch Strategy',
-                  description: index == 0
-                      ? 'Redesigning the onboarding flow'
-                      : 'Q4 social media campaign',
-                  progress: index == 0 ? 0.75 : 0.3,
-                  categoryColor: index == 0 ? null : AppColors.warning,
-                  isHighlighted: isHighlighted,
-                ),
-              );
-            },
+              ),
+            ),
+          )
+        else
+          SizedBox(
+            height: 200,
+            child: ListView.builder(
+              controller: _scrollController,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              itemCount: recentProjects.length,
+              itemBuilder: (context, index) {
+                final project = recentProjects[index];
+                final progress = project.totalTasks > 0
+                    ? project.completedTasks / project.totalTasks
+                    : 0.0;
+                final isHighlighted = index == _centeredIndex;
+                return Container(
+                  width: 260,
+                  margin: EdgeInsets.only(
+                    right: index < recentProjects.length - 1 ? 16 : 0,
+                  ),
+                  child: ProjectCard(
+                    title: project.name,
+                    description: project.description.isEmpty ? 'No description' : project.description,
+                    progress: progress,
+                    category: _getPriorityLabel(project.priority),
+                    categoryColor: _getPriorityColor(project.priority),
+                    isHighlighted: isHighlighted,
+                    onTap: () => context.push('/project/${project.id}'),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
       ],
     );
+  }
+
+  String _getPriorityLabel(ProjectPriority priority) {
+    switch (priority) {
+      case ProjectPriority.high:
+        return 'HIGH';
+      case ProjectPriority.medium:
+        return 'MED';
+      case ProjectPriority.low:
+        return 'LOW';
+    }
+  }
+
+  Color _getPriorityColor(ProjectPriority priority) {
+    switch (priority) {
+      case ProjectPriority.high:
+        return const Color(0xFFEF4444);
+      case ProjectPriority.medium:
+        return const Color(0xFFF59E0B);
+      case ProjectPriority.low:
+        return const Color(0xFF10B981);
+    }
   }
 }
 
 class ProjectCard extends StatelessWidget {
-  final IconData icon;
-  final String category;
   final String title;
   final String description;
   final double progress;
-  final Color? categoryColor;
+  final String category;
+  final Color categoryColor;
   final bool isHighlighted;
+  final VoidCallback onTap;
 
   const ProjectCard({
     super.key,
-    required this.icon,
-    required this.category,
     required this.title,
     required this.description,
     required this.progress,
-    this.categoryColor,
+    required this.category,
+    required this.categoryColor,
     this.isHighlighted = false,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeInOut,
-      padding: const EdgeInsets.all(20),
-      decoration: isHighlighted
-          ? BoxDecoration(
-              gradient: const LinearGradient(
-                colors: AppColors.brandGradient,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.all(20),
+        decoration: isHighlighted
+            ? BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: AppColors.brandGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: cs.primary.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              )
+            : BoxDecoration(
+                color: cs.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cs.outline),
               ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: cs.primary.withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isHighlighted
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : cs.background,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.folder_rounded,
+                    color: isHighlighted
+                        ? Colors.white
+                        : cs.onSurface.withValues(alpha: 0.6),
+                    size: 20,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isHighlighted
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : categoryColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    category,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                      color: isHighlighted ? Colors.white : categoryColor,
+                    ),
+                  ),
                 ),
               ],
-            )
-          : BoxDecoration(
-              color: cs.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: cs.outline),
             ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isHighlighted
-                      ? Colors.white.withOpacity(0.2)
-                      : cs.background,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  icon,
-                  color: isHighlighted
-                      ? Colors.white
-                      : cs.onSurface.withOpacity(0.6),
-                  size: 20,
-                ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isHighlighted ? Colors.white : cs.onSurface,
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isHighlighted
-                      ? Colors.white.withOpacity(0.2)
-                      : (categoryColor ?? AppColors.warning).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  category,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 12,
+                color: isHighlighted
+                    ? Colors.white.withValues(alpha: 0.7)
+                    : cs.onSurface.withValues(alpha: 0.5),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Progress',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
                     color: isHighlighted
-                        ? Colors.white
-                        : (categoryColor ?? AppColors.warning),
+                        ? Colors.white.withValues(alpha: 0.7)
+                        : cs.onSurface.withValues(alpha: 0.4),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isHighlighted ? Colors.white : cs.onSurface,
+                Text(
+                  '${(progress * 100).round()}%',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: isHighlighted ? Colors.white : cs.onSurface,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            description,
-            style: TextStyle(
-              fontSize: 12,
-              color: isHighlighted
-                  ? Colors.white.withOpacity(0.7)
-                  : cs.onSurface.withOpacity(0.5),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Progress',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: isHighlighted
-                      ? Colors.white.withOpacity(0.7)
-                      : cs.onSurface.withOpacity(0.4),
-                ),
-              ),
-              Text(
-                '${(progress * 100).round()}%',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: isHighlighted ? Colors.white : cs.onSurface,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Stack(
-            children: [
-              Container(
-                width: double.infinity,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: isHighlighted
-                      ? Colors.white.withOpacity(0.2)
-                      : cs.outline,
-                  borderRadius: BorderRadius.circular(32),
-                ),
-              ),
-              FractionallySizedBox(
-                widthFactor: progress,
-                child: Container(
+            const SizedBox(height: 4),
+            Stack(
+              children: [
+                Container(
+                  width: double.infinity,
                   height: 6,
                   decoration: BoxDecoration(
-                    color: isHighlighted ? Colors.white : cs.primary,
+                    color: isHighlighted
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : cs.outline,
                     borderRadius: BorderRadius.circular(32),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                FractionallySizedBox(
+                  widthFactor: progress,
+                  child: Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: isHighlighted ? Colors.white : cs.primary,
+                      borderRadius: BorderRadius.circular(32),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

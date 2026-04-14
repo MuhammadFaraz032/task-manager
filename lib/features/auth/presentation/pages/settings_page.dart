@@ -11,8 +11,6 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // LEARNING: BlocProvider creates a fresh AuthBloc
-    // for this screen via GetIt
     return const _SettingsView();
   }
 }
@@ -25,8 +23,6 @@ class _SettingsView extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // LEARNING: BlocListener handles side effects
-    // when logout succeeds → navigate to login
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
@@ -75,23 +71,35 @@ class _SettingsView extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        // TODO: Replace with real user name from AuthBloc
-                        "Faraz Ahmed",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        // TODO: Replace with real user email from AuthBloc
-                        "faraz@test.com",
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.white70,
-                        ),
+                      BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, state) {
+                          final name = state is AuthAuthenticated
+                              ? state.user.fullName
+                              : '';
+                          final email = state is AuthAuthenticated
+                              ? state.user.email
+                              : '';
+                          return Column(
+                            children: [
+                              Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                email,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -172,8 +180,6 @@ class _SettingsView extends StatelessWidget {
                       onTap: isLoading
                           ? null
                           : () {
-                              // LEARNING: Show confirmation dialog
-                              // before logging out — good UX practice
                               showDialog(
                                 context: context,
                                 builder: (dialogContext) => AlertDialog(
@@ -197,16 +203,12 @@ class _SettingsView extends StatelessWidget {
                                           Navigator.pop(dialogContext),
                                       child: Text(
                                         "Cancel",
-                                        style:
-                                            TextStyle(color: cs.onSurface),
+                                        style: TextStyle(color: cs.onSurface),
                                       ),
                                     ),
                                     TextButton(
                                       onPressed: () {
                                         Navigator.pop(dialogContext);
-                                        // LEARNING: Add logout event to
-                                        // AuthBloc — triggers Firebase
-                                        // signOut() via LogoutUseCase
                                         context.read<AuthBloc>().add(
                                               const AuthLogoutRequested(),
                                             );

@@ -101,7 +101,7 @@ class BottomNavigation extends StatelessWidget {
                 // withOpacity(0) is fully transparent — cleaner than
                 // using null or conditional color.
                 color: isSelected
-                    ? cs.primary.withOpacity(0.12)
+                    ? cs.primary.withValues(alpha: 0.12)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -111,7 +111,7 @@ class BottomNavigation extends StatelessWidget {
                 // states so it adapts to both dark and light themes.
                 color: isSelected
                     ? cs.primary
-                    : cs.onSurface.withOpacity(0.4),
+                    : cs.onSurface.withValues(alpha: 0.4),
                 size: 22,
               ),
             ),
@@ -124,7 +124,7 @@ class BottomNavigation extends StatelessWidget {
                     isSelected ? FontWeight.w600 : FontWeight.w400,
                 color: isSelected
                     ? cs.primary
-                    : cs.onSurface.withOpacity(0.4),
+                    : cs.onSurface.withValues(alpha: 0.4),
               ),
               child: Text(label),
             ),

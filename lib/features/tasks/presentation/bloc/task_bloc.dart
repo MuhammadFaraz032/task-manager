@@ -17,18 +17,23 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
 
   StreamSubscription? _tasksSubscription;
 
+  // LEARNING: Store last query params so we can
+  // restart the stream after any operation
+  String? _lastWorkspaceId;
+  String? _lastProjectId;
+
   TaskBloc({
     required GetTasksUseCase getTasksUseCase,
     required CreateTaskUseCase createTaskUseCase,
     required UpdateTaskUseCase updateTaskUseCase,
     required ToggleTaskUseCase toggleTaskUseCase,
     required DeleteTaskUseCase deleteTaskUseCase,
-  })  : _getTasksUseCase = getTasksUseCase,
-        _createTaskUseCase = createTaskUseCase,
-        _updateTaskUseCase = updateTaskUseCase,
-        _toggleTaskUseCase = toggleTaskUseCase,
-        _deleteTaskUseCase = deleteTaskUseCase,
-        super(const TaskInitial()) {
+  }) : _getTasksUseCase = getTasksUseCase,
+       _createTaskUseCase = createTaskUseCase,
+       _updateTaskUseCase = updateTaskUseCase,
+       _toggleTaskUseCase = toggleTaskUseCase,
+       _deleteTaskUseCase = deleteTaskUseCase,
+       super(const TaskInitial()) {
     on<TasksLoadRequested>(_onTasksLoadRequested);
     on<TaskCreateRequested>(_onTaskCreateRequested);
     on<TaskUpdateRequested>(_onTaskUpdateRequested);
@@ -37,24 +42,37 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
   }
 
   Future<void> _onTasksLoadRequested(
-    TasksLoadRequested event,
-    Emitter<TaskState> emit,
-  ) async {
-    emit(const TaskLoading());
-    try {
-      await _tasksSubscription?.cancel();
-      await emit.forEach(
-        _getTasksUseCase.execute(
-          workspaceId: event.workspaceId,
-          projectId: event.projectId,
-        ),
-        onData: (tasks) => TasksLoaded(tasks),
-        onError: (error, _) => TaskError(error.toString()),
-      );
-    } catch (e) {
-      emit(TaskError(e.toString()));
-    }
+  TasksLoadRequested event,
+  Emitter<TaskState> emit,
+) async {
+  // print('🔵 TASKS LOAD REQUESTED: workspaceId=${event.workspaceId}');
+  emit(const TaskLoading());
+  try {
+    await _tasksSubscription?.cancel();
+    // print('🔵 Old subscription cancelled');
+    
+    _lastWorkspaceId = event.workspaceId;
+    _lastProjectId = event.projectId;
+
+    await emit.forEach(
+      _getTasksUseCase.execute(
+        workspaceId: event.workspaceId,
+        projectId: event.projectId,
+      ),
+      onData: (tasks) {
+        // print('🔵 TASKS RECEIVED FROM STREAM: ${tasks.length} tasks');
+        return TasksLoaded(tasks);
+      },
+      onError: (error, _) {
+        // print('🔴 STREAM ERROR: $error');
+        return TaskError(error.toString());
+      },
+    );
+  } catch (e) {
+    // print('🔴 CATCH ERROR: $e');
+    emit(TaskError(e.toString()));
   }
+}
 
   Future<void> _onTaskCreateRequested(
     TaskCreateRequested event,
@@ -91,7 +109,17 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
         dueDate: event.dueDate,
         checklist: event.checklist,
       );
-      emit(const TaskOperationSuccess('Task updated'));
+
+      if (_lastWorkspaceId != null) {
+        await emit.forEach(
+          _getTasksUseCase.execute(
+            workspaceId: _lastWorkspaceId!,
+            projectId: _lastProjectId,
+          ),
+          onData: (tasks) => TasksLoaded(tasks),
+          onError: (error, _) => TaskError(error.toString()),
+        );
+      }
     } catch (e) {
       emit(TaskError(e.toString()));
     }
@@ -106,7 +134,17 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
         taskId: event.taskId,
         completedBy: event.completedBy,
       );
-      emit(const TaskOperationSuccess('Task toggled'));
+
+      if (_lastWorkspaceId != null) {
+        await emit.forEach(
+          _getTasksUseCase.execute(
+            workspaceId: _lastWorkspaceId!,
+            projectId: _lastProjectId,
+          ),
+          onData: (tasks) => TasksLoaded(tasks),
+          onError: (error, _) => TaskError(error.toString()),
+        );
+      }
     } catch (e) {
       emit(TaskError(e.toString()));
     }
@@ -121,7 +159,19 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
         taskId: event.taskId,
         deletedBy: event.deletedBy,
       );
-      emit(const TaskOperationSuccess('Task deleted'));
+
+      // LEARNING: Restart the stream after delete
+      // so the UI reflects the change immediately
+      if (_lastWorkspaceId != null) {
+        await emit.forEach(
+          _getTasksUseCase.execute(
+            workspaceId: _lastWorkspaceId!,
+            projectId: _lastProjectId,
+          ),
+          onData: (tasks) => TasksLoaded(tasks),
+          onError: (error, _) => TaskError(error.toString()),
+        );
+      }
     } catch (e) {
       emit(TaskError(e.toString()));
     }

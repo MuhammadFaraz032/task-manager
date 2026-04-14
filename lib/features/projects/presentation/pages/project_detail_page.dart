@@ -689,155 +689,6 @@ class _TaskSectionState extends State<_TaskSection> {
   }
 }
 
-// ─────────────────────────────────────────────
-// TASK SECTION — mock for now
-// TODO: wire to TaskBloc in next step
-// ─────────────────────────────────────────────
-// class _TaskSection extends StatelessWidget {
-//   final ColorScheme cs;
-
-//   const _TaskSection({required this.cs});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Column(
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         Row(
-//           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//           children: [
-//             Text(
-//               "Tasks",
-//               style: TextStyle(
-//                 fontSize: 16,
-//                 fontWeight: FontWeight.w600,
-//                 color: cs.onSurface,
-//               ),
-//             ),
-//             Container(
-//               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-//               decoration: BoxDecoration(
-//                 color: cs.surface,
-//                 borderRadius: BorderRadius.circular(999),
-//                 border: Border.all(color: cs.outline),
-//               ),
-//               child: Text(
-//                 "0 tasks",
-//                 style: TextStyle(
-//                   fontSize: 12,
-//                   color: cs.onSurface.withValues(alpha: 0.5),
-//                 ),
-//               ),
-//             ),
-//           ],
-//         ),
-//         const SizedBox(height: 24),
-//         Center(
-//           child: Column(
-//             children: [
-//               Icon(
-//                 Icons.task_outlined,
-//                 size: 48,
-//                 color: cs.onSurface.withValues(alpha: 0.3),
-//               ),
-//               const SizedBox(height: 12),
-//               Text(
-//                 "No tasks yet",
-//                 style: TextStyle(
-//                   fontSize: 16,
-//                   fontWeight: FontWeight.w600,
-//                   color: cs.onSurface.withValues(alpha: 0.5),
-//                 ),
-//               ),
-//               const SizedBox(height: 8),
-//               Text(
-//                 "Tap 'Add New Task' to get started",
-//                 style: TextStyle(
-//                   fontSize: 13,
-//                   color: cs.onSurface.withValues(alpha: 0.4),
-//                 ),
-//               ),
-//             ],
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-// }
-
-// ─────────────────────────────────────────────
-// TASK TILE
-// ─────────────────────────────────────────────
-// class _TaskTile extends StatelessWidget {
-//   final ColorScheme cs;
-//   final String title;
-//   final String? priority;
-//   final Color? priorityColor;
-//   final String? dueDate;
-//   final Color? dueDateColor;
-//   final bool isCompleted;
-
-//   const _TaskTile({
-//     required this.cs,
-//     required this.title,
-//     this.priority,
-//     this.priorityColor,
-//     this.dueDate,
-//     this.dueDateColor,
-//     this.isCompleted = false,
-//   });
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       padding: const EdgeInsets.all(16),
-//       decoration: BoxDecoration(
-//         color: isCompleted ? cs.surface.withValues(alpha: 0.5) : cs.surface,
-//         border: Border.all(
-//           color: isCompleted ? cs.outline.withValues(alpha: 0.5) : cs.outline,
-//         ),
-//         borderRadius: BorderRadius.circular(16),
-//       ),
-//       child: Row(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           Container(
-//             width: 24,
-//             height: 24,
-//             decoration: BoxDecoration(
-//               shape: BoxShape.circle,
-//               color: isCompleted ? cs.primary : Colors.transparent,
-//               border: Border.all(
-//                 color: isCompleted
-//                     ? cs.primary
-//                     : cs.primary.withValues(alpha: 0.3),
-//                 width: 2,
-//               ),
-//             ),
-//             child: isCompleted
-//                 ? const Icon(Icons.check_rounded, color: Colors.white, size: 12)
-//                 : null,
-//           ),
-//           const SizedBox(width: 12),
-//           Expanded(
-//             child: Text(
-//               title,
-//               style: TextStyle(
-//                 fontSize: 14,
-//                 fontWeight: FontWeight.w600,
-//                 color: isCompleted
-//                     ? cs.onSurface.withValues(alpha: 0.5)
-//                     : cs.onSurface,
-//                 decoration: isCompleted ? TextDecoration.lineThrough : null,
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
 class _TaskTile extends StatelessWidget {
   final ColorScheme cs;
   final TaskEntity task;
@@ -874,7 +725,7 @@ class _TaskTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => context.go('/task/${task.id}'),
+      onTap: () => context.push('/task/${task.id}'),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -1054,6 +905,9 @@ class _AddTaskButton extends StatelessWidget {
         ),
         child: ElevatedButton.icon(
           onPressed: () {
+            final taskBloc = context.read<TaskBloc>();
+            final workspaceCubit = context.read<WorkspaceCubit>();
+
             showModalBottomSheet(
               context: context,
               isScrollControlled: true,
@@ -1069,7 +923,19 @@ class _AddTaskButton extends StatelessWidget {
                 ),
                 child: AddTaskPage(projectId: projectId),
               ),
-            );
+            ).whenComplete(() {
+              // LEARNING: whenComplete fires when sheet closes
+              // for any reason — reload tasks to restart stream
+              final workspaceState = workspaceCubit.state;
+              if (workspaceState is WorkspaceLoaded) {
+                taskBloc.add(
+                  TasksLoadRequested(
+                    workspaceId: workspaceState.workspace.id,
+                    projectId: projectId,
+                  ),
+                );
+              }
+            });
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,

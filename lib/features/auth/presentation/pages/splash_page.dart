@@ -47,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
               top: -128,
               child: _blurCircle(
                 size: 384,
-                color: cs.primary.withOpacity(0.1),
+                color: cs.primary.withValues(alpha: 0.1),
                 blur: 60,
               ),
             ),
@@ -58,7 +58,7 @@ class _SplashScreenState extends State<SplashScreen> {
               bottom: -128,
               child: _blurCircle(
                 size: 384,
-                color: cs.secondary.withOpacity(0.1),
+                color: cs.secondary.withValues(alpha: 0.1),
                 blur: 60,
               ),
             ),
@@ -67,7 +67,7 @@ class _SplashScreenState extends State<SplashScreen> {
             Center(
               child: _blurCircle(
                 size: 500,
-                color: cs.primary.withOpacity(0.05),
+                color: cs.primary.withValues(alpha: 0.5),
                 blur: 75,
               ),
             ),
@@ -98,7 +98,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       width: 128,
                       height: 6,
                       decoration: BoxDecoration(
-                        color: cs.outline.withOpacity(0.5),
+                        color: cs.outline.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
@@ -137,7 +137,7 @@ class _SplashScreenState extends State<SplashScreen> {
         /// Outer glow
         _blurCircle(
           size: 144,
-          color: cs.primary.withOpacity(0.2),
+          color: cs.primary.withValues(alpha: 0.2),
           blur: 32,
         ),
 
@@ -150,10 +150,10 @@ class _SplashScreenState extends State<SplashScreen> {
               width: 112,
               height: 112,
               decoration: BoxDecoration(
-                color: cs.surface.withOpacity(0.4),
+                color: cs.surface.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: cs.onSurface.withOpacity(0.05),
+                  color: cs.onSurface.withValues(alpha: 0.05),
                 ),
               ),
             ),
@@ -173,7 +173,7 @@ class _SplashScreenState extends State<SplashScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: cs.primary.withOpacity(0.25),
+                color: cs.primary.withValues(alpha: 0.25),
                 blurRadius: 50,
               ),
             ],
@@ -209,7 +209,7 @@ class _SplashScreenState extends State<SplashScreen> {
               fontSize: 14,
               fontWeight: FontWeight.w500,
               letterSpacing: 2.8,
-              color: cs.onSurface.withOpacity(0.6),
+              color: cs.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -289,7 +289,7 @@ class _LoadingProgressSectionState extends State<LoadingProgressSection>
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1,
-                  color: cs.onSurface.withOpacity(0.4),
+                  color: cs.onSurface.withValues(alpha: 0.4),
                 ),
               ),
               Text(
@@ -345,7 +345,7 @@ class _LoadingProgressSectionState extends State<LoadingProgressSection>
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
                 letterSpacing: 1,
-                color: cs.onSurface.withOpacity(0.3),
+                color: cs.onSurface.withValues(alpha: 0.3),
               ),
             ),
           ),
