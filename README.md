@@ -178,15 +178,6 @@ Register your Android and/or iOS app with Firebase
 
 Download and add configuration files as shown above
 
-Testing
-bash
-# Run all tests
-flutter test
-
-# Run specific BLoC tests
-flutter test test/blocs/task_bloc_test.dart
-Test coverage includes AuthBloc state transitions, TaskBloc event handling, and repository mock implementations.
-
 Progress Tracking
 BLoC Learning Status
 Concept	Status
@@ -203,15 +194,15 @@ hydrated_bloc (state persistence)	Planned
 Event Transformers	Planned
 Feature Completion Status
 Milestone	Status
-MVP Complete	March 2026
+MVP Complete	April 2026
 Phase 2 – Collaboration Features	Planned
 Phase 2 – Notifications	Planned
 Phase 2 – Offline Support	Planned
-Connect
-Platform	Link
-Portfolio	[Add your portfolio link here]
+
+Connect Platform	Link
+Portfolio	https://github.com/MuhammadFaraz032/portfolio
 GitHub	https://github.com/MuhammadFaraz032
-LinkedIn	[Add your LinkedIn URL here]
+LinkedIn	www.linkedin.com/in/muhammad-faraz-b619002b2
 Acknowledgments
 BLoC Library documentation and community
 
