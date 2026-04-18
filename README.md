@@ -1,4 +1,4 @@
-# TaskFlow – Task Management Dashboard
+# Task Management Dashboard
 
 A production-ready task management application built with **Flutter** and **BLoC** state management, powered by Firebase backend. This project demonstrates real-world mobile development patterns including clean architecture, real-time data sync, and comprehensive state management.
 
