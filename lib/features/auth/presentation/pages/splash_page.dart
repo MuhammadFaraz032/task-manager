@@ -1,7 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:task_manager/core/theme/themecolors.dart';
+import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:task_manager/features/auth/presentation/bloc/auth_event.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,21 +16,29 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   @override
+  @override
   void initState() {
     super.initState();
-    _navigateToLogin();
+    _navigateToNext();
   }
 
   // LEARNING: We extracted navigation logic into its own method.
   // Keeps initState() clean and readable.
-  Future<void> _navigateToLogin() async {
+  Future<void> _navigateToNext() async {
+    // Trigger auth check immediately in background
+    // so BLoCs are warm by the time splash ends
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthBloc>().add(const AuthCheckRequested());
+    });
+
     await Future.delayed(const Duration(seconds: 3));
-    // LEARNING: mounted check is critical before using context
-    // after an async gap. The widget may have been disposed
-    // while we were waiting — without this check you get
-    // "use of context after async gap" errors.
     if (!mounted) return;
-    context.go('/login');
+    final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+    if (isLoggedIn) {
+      context.go('/dashboard');
+    } else {
+      context.go('/login');
+    }
   }
 
   @override
@@ -122,10 +134,7 @@ class _SplashScreenState extends State<SplashScreen> {
       child: Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
     );
   }
@@ -152,9 +161,7 @@ class _SplashScreenState extends State<SplashScreen> {
               decoration: BoxDecoration(
                 color: cs.surface.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: cs.onSurface.withValues(alpha: 0.05),
-                ),
+                border: Border.all(color: cs.onSurface.withValues(alpha: 0.05)),
               ),
             ),
           ),
@@ -178,11 +185,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ],
           ),
-          child: const Icon(
-            Icons.bolt,
-            color: Colors.white,
-            size: 40,
-          ),
+          child: const Icon(Icons.bolt, color: Colors.white, size: 40),
         ),
       ],
     );
@@ -225,14 +228,10 @@ class _SplashScreenState extends State<SplashScreen> {
 class LoadingProgressSection extends StatefulWidget {
   final ColorScheme colorScheme;
 
-  const LoadingProgressSection({
-    super.key,
-    required this.colorScheme,
-  });
+  const LoadingProgressSection({super.key, required this.colorScheme});
 
   @override
-  State<LoadingProgressSection> createState() =>
-      _LoadingProgressSectionState();
+  State<LoadingProgressSection> createState() => _LoadingProgressSectionState();
 }
 
 class _LoadingProgressSectionState extends State<LoadingProgressSection>
@@ -251,14 +250,12 @@ class _LoadingProgressSectionState extends State<LoadingProgressSection>
       duration: const Duration(seconds: 3),
     );
 
-    _animation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
-      ),
-    )..addListener(() {
-        setState(() {});
-      });
+    _animation =
+        Tween<double>(begin: 0, end: 1).animate(
+          CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+        )..addListener(() {
+          setState(() {});
+        });
 
     _controller.forward();
   }

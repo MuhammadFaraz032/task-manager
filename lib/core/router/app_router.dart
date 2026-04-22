@@ -34,9 +34,15 @@ final GoRouter appRouter = GoRouter(
     final currentPath = state.uri.toString();
 
     // Pages that don't require login
-    final isAuthPage = currentPath == '/login' ||
-        currentPath == '/register' ||
-        currentPath == '/';
+    // final isAuthPage = currentPath == '/login' ||
+    //     currentPath == '/register' ||
+    //     currentPath == '/';
+
+    // Always let splash show — it handles its own navigation
+    if (currentPath == '/') return null;
+
+    // Pages that don't require login
+    final isAuthPage = currentPath == '/login' || currentPath == '/register';
 
     // LEARNING: If not logged in and trying to access
     // a protected page → send to login

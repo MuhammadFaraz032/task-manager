@@ -7,7 +7,6 @@ import 'package:task_manager/core/theme/theme_cubit.dart';
 import 'package:task_manager/core/theme/theme_state.dart';
 import 'package:task_manager/core/theme/themecolors.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:task_manager/features/auth/presentation/bloc/auth_event.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
 import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
 import 'package:task_manager/features/workspace/presentation/cubit/workspace_cubit.dart';
@@ -38,14 +37,7 @@ void main() async {
       providers: [
         BlocProvider(create: (_) => getIt<ThemeCubit>()),
         BlocProvider(create: (_) => getIt<WorkspaceCubit>()),
-        BlocProvider(
-          create: (_) => getIt<AuthBloc>()
-            // LEARNING: Add AuthCheckRequested immediately
-            // when AuthBloc is created at app start
-            // This loads the current Firebase user
-            // before any screen renders
-            ..add(const AuthCheckRequested()),
-        ),
+        BlocProvider(create: (_) => getIt<AuthBloc>()),
         BlocProvider(create: (_) => getIt<ProjectBloc>()),
         BlocProvider(create: (_) => getIt<TaskBloc>()),
       ],
