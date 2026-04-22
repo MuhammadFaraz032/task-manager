@@ -12,7 +12,7 @@ import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
 import 'package:task_manager/features/workspace/presentation/cubit/workspace_cubit.dart';
 import 'package:task_manager/firebase_options.dart';
 import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
-// import 'firebase_options.dart';
+import 'package:task_manager/features/members/presentation/bloc/member_bloc.dart';
 
 void main() async {
   // LEARNING: WidgetsFlutterBinding.ensureInitialized() must be
@@ -40,6 +40,7 @@ void main() async {
         BlocProvider(create: (_) => getIt<AuthBloc>()),
         BlocProvider(create: (_) => getIt<ProjectBloc>()),
         BlocProvider(create: (_) => getIt<TaskBloc>()),
+        BlocProvider(create: (_) => getIt<MemberBloc>()),
       ],
       child: const MyApp(),
     ),

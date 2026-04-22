@@ -7,11 +7,14 @@ import 'package:task_manager/features/auth/presentation/pages/profile_page.dart'
 import 'package:task_manager/features/auth/presentation/pages/settings_page.dart';
 import 'package:task_manager/features/auth/presentation/pages/splash_page.dart';
 import 'package:task_manager/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:task_manager/features/members/presentation/pages/pending_invites_page.dart';
 import 'package:task_manager/features/projects/presentation/pages/project_detail_page.dart';
 import 'package:task_manager/features/projects/presentation/pages/projects_page.dart';
 import 'package:task_manager/features/tasks/presentation/pages/task_details_page.dart';
 import 'package:task_manager/features/tasks/presentation/pages/task_list_page.dart';
 import 'package:task_manager/features/auth/presentation/pages/register_page.dart';
+import 'package:task_manager/features/members/presentation/pages/manage_workspace_page.dart';
+// import 'package:task_manager/features/members/presentation/pages/pending_invites_page.dart';
 
 // LEARNING: GoRouter listens to Firebase auth state stream.
 // Whenever auth state changes (login/logout) the router
@@ -123,6 +126,16 @@ final GoRouter appRouter = GoRouter(
         final taskId = state.pathParameters['id'] ?? '';
         return TaskDetailPage(taskId: taskId);
       },
+    ),
+    GoRoute(
+      path: '/workspace',
+      name: 'workspace',
+      builder: (context, state) => const ManageWorkspacePage(),
+    ),
+    GoRoute(
+      path: '/invites',
+      name: 'invites',
+      builder: (context, state) => const PendingInvitesPage(),
     ),
   ],
 

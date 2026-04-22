@@ -142,6 +142,7 @@ class _SettingsView extends StatelessWidget {
                     icon: Icons.work_rounded,
                     title: "Manage Workspace",
                     subtitle: "Active",
+                    onTap: () => context.push('/workspace'),
                   ),
                 ],
               ),
@@ -330,18 +331,20 @@ class _NavTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? subtitle;
+  final VoidCallback? onTap;
 
   const _NavTile({
     required this.cs,
     required this.icon,
     required this.title,
     this.subtitle,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {},
+      onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         height: 60,

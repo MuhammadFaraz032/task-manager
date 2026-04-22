@@ -40,6 +40,16 @@ import 'package:task_manager/features/projects/domain/usecases/delete_project_us
 import 'package:task_manager/features/projects/domain/usecases/get_projects_usecase.dart';
 import 'package:task_manager/features/projects/domain/usecases/update_project_usecase.dart';
 import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
+// Members
+import 'package:task_manager/features/members/data/datasources/member_remote_datasource.dart';
+import 'package:task_manager/features/members/data/repositories/member_repository_impl.dart';
+import 'package:task_manager/features/members/domain/repositories/member_repository.dart';
+import 'package:task_manager/features/members/domain/usecases/invite_user_usecase.dart';
+import 'package:task_manager/features/members/domain/usecases/accept_invite_usecase.dart';
+import 'package:task_manager/features/members/domain/usecases/decline_invite_usecase.dart';
+import 'package:task_manager/features/members/domain/usecases/get_workspace_members_usecase.dart';
+import 'package:task_manager/features/members/domain/usecases/get_pending_invites_usecase.dart';
+import 'package:task_manager/features/members/presentation/bloc/member_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -175,6 +185,38 @@ Future<void> setupDependencies() async {
       updateTaskUseCase: getIt(),
       toggleTaskUseCase: getIt(),
       deleteTaskUseCase: getIt(),
+    ),
+  );
+
+  // ─────────────────────────────────────────────
+  // MEMBERS FEATURE
+  // ─────────────────────────────────────────────
+
+  // Data Sources
+  getIt.registerLazySingleton<MemberRemoteDataSource>(
+    () => MemberRemoteDataSourceImpl(firestore: getIt()),
+  );
+
+  // Repositories
+  getIt.registerLazySingleton<MemberRepository>(
+    () => MemberRepositoryImpl(dataSource: getIt()),
+  );
+
+  // Use Cases
+  getIt.registerLazySingleton(() => InviteUserUseCase(getIt()));
+  getIt.registerLazySingleton(() => AcceptInviteUseCase(getIt()));
+  getIt.registerLazySingleton(() => DeclineInviteUseCase(getIt()));
+  getIt.registerLazySingleton(() => GetWorkspaceMembersUseCase(getIt()));
+  getIt.registerLazySingleton(() => GetPendingInvitesUseCase(getIt()));
+
+  // BLoC — Factory because it has screen state
+  getIt.registerFactory(
+    () => MemberBloc(
+      getWorkspaceMembersUseCase: getIt(),
+      inviteUserUseCase: getIt(),
+      acceptInviteUseCase: getIt(),
+      declineInviteUseCase: getIt(),
+      getPendingInvitesUseCase: getIt(),
     ),
   );
 }

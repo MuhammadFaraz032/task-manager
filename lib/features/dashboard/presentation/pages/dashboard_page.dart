@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:task_manager/core/widgets/app_bottom_navbar.dart';
 import 'package:task_manager/core/widgets/coming_soon.dart';
+import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
 import 'package:task_manager/features/auth/presentation/pages/profile_page.dart';
 import 'package:task_manager/features/auth/presentation/pages/settings_page.dart';
 import 'package:task_manager/features/dashboard/presentation/widgets/dashboard_app_bar.dart';
@@ -10,15 +13,16 @@ import 'package:task_manager/features/dashboard/presentation/widgets/project_car
 import 'package:task_manager/features/dashboard/presentation/widgets/quick_actions_section.dart';
 import 'package:task_manager/features/dashboard/presentation/widgets/stat_card.dart';
 import 'package:task_manager/features/dashboard/presentation/widgets/todays_focus_section.dart';
+import 'package:task_manager/features/members/presentation/bloc/member_bloc.dart';
+import 'package:task_manager/features/members/presentation/bloc/member_event.dart';
+import 'package:task_manager/features/members/presentation/bloc/member_state.dart';
 import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
 import 'package:task_manager/features/projects/presentation/bloc/project_event.dart';
-import 'package:task_manager/features/workspace/presentation/cubit/workspace_state.dart';
-// import 'package:task_manager/features/projects/presentation/bloc/project_state.dart';
 import 'package:task_manager/features/projects/presentation/pages/projects_page.dart';
 import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
 import 'package:task_manager/features/tasks/presentation/bloc/task_event.dart';
-// import 'package:task_manager/features/tasks/presentation/bloc/task_state.dart';
 import 'package:task_manager/features/workspace/presentation/cubit/workspace_cubit.dart';
+import 'package:task_manager/features/workspace/presentation/cubit/workspace_state.dart';
 
 class MainDashboard extends StatefulWidget {
   const MainDashboard({super.key});
@@ -99,11 +103,17 @@ class _DashboardContentState extends State<DashboardContent> {
     final workspaceId = context.read<WorkspaceCubit>().currentWorkspaceId;
     if (workspaceId != null) {
       context.read<ProjectBloc>().add(
-        ProjectsLoadRequested(workspaceId: workspaceId),
-      );
+            ProjectsLoadRequested(workspaceId: workspaceId),
+          );
       context.read<TaskBloc>().add(
-        TasksLoadRequested(workspaceId: workspaceId),
-      );
+            TasksLoadRequested(workspaceId: workspaceId),
+          );
+    }
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<MemberBloc>().add(
+            PendingInvitesLoadRequested(userEmail: authState.user.email),
+          );
     }
   }
 
@@ -123,6 +133,8 @@ class _DashboardContentState extends State<DashboardContent> {
               child: Column(
                 children: [
                   GreetingSection(),
+                  SizedBox(height: 16),
+                  _PendingInvitesBanner(),
                   SizedBox(height: 24),
                   StatsGrid(),
                   SizedBox(height: 24),
@@ -138,6 +150,52 @@ class _DashboardContentState extends State<DashboardContent> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PendingInvitesBanner extends StatelessWidget {
+  const _PendingInvitesBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return BlocBuilder<MemberBloc, MemberState>(
+      builder: (context, state) {
+        if (state is! PendingInvitesLoaded) return const SizedBox();
+        if (state.invites.isEmpty) return const SizedBox();
+
+        final count = state.invites.length;
+
+        return GestureDetector(
+          onTap: () => context.push('/invites'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.mail_outline_rounded, color: cs.primary, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'You have $count pending workspace invite${count > 1 ? 's' : ''}',
+                    style: TextStyle(
+                      color: cs.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: cs.primary, size: 20),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
