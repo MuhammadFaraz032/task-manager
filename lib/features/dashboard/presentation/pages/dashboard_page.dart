@@ -13,9 +13,9 @@ import 'package:task_manager/features/dashboard/presentation/widgets/project_car
 import 'package:task_manager/features/dashboard/presentation/widgets/quick_actions_section.dart';
 import 'package:task_manager/features/dashboard/presentation/widgets/stat_card.dart';
 import 'package:task_manager/features/dashboard/presentation/widgets/todays_focus_section.dart';
-import 'package:task_manager/features/members/presentation/bloc/member_bloc.dart';
-import 'package:task_manager/features/members/presentation/bloc/member_event.dart';
-import 'package:task_manager/features/members/presentation/bloc/member_state.dart';
+import 'package:task_manager/features/members/presentation/bloc/invite_bloc.dart';
+import 'package:task_manager/features/members/presentation/bloc/invite_event.dart';
+import 'package:task_manager/features/members/presentation/bloc/invite_state.dart';
 import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
 import 'package:task_manager/features/projects/presentation/bloc/project_event.dart';
 import 'package:task_manager/features/projects/presentation/pages/projects_page.dart';
@@ -111,7 +111,7 @@ class _DashboardContentState extends State<DashboardContent> {
     }
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<MemberBloc>().add(
+      context.read<InviteBloc>().add(
             PendingInvitesLoadRequested(userEmail: authState.user.email),
           );
     }
@@ -161,7 +161,7 @@ class _PendingInvitesBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return BlocBuilder<MemberBloc, MemberState>(
+    return BlocBuilder<InviteBloc, InviteState>(
       builder: (context, state) {
         if (state is! PendingInvitesLoaded) return const SizedBox();
         if (state.invites.isEmpty) return const SizedBox();

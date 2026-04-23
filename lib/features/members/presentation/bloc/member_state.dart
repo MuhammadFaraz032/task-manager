@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 import 'package:task_manager/features/auth/domain/entities/user_entity.dart';
-import 'package:task_manager/features/members/domain/entities/member_entity.dart';
 
 abstract class MemberState extends Equatable {
   const MemberState();
@@ -21,21 +20,6 @@ class MembersLoaded extends MemberState {
   @override
   List<Object?> get props => [members];
 }
-
-class PendingInvitesLoaded extends MemberState {
-  final List<InviteEntity> invites;
-
-  const PendingInvitesLoaded(this.invites);
-
-  @override
-  List<Object?> get props => [invites];
-}
-
-class InviteSent extends MemberState {}
-
-class InviteAccepted extends MemberState {}
-
-class InviteDeclined extends MemberState {}
 
 class MemberError extends MemberState {
   final String message;

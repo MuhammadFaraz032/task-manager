@@ -8,6 +8,7 @@ import 'package:task_manager/core/theme/theme_state.dart';
 import 'package:task_manager/core/theme/themecolors.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
+import 'package:task_manager/features/members/presentation/bloc/invite_bloc.dart';
 import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
 import 'package:task_manager/features/workspace/presentation/cubit/workspace_cubit.dart';
 import 'package:task_manager/firebase_options.dart';
@@ -41,6 +42,7 @@ void main() async {
         BlocProvider(create: (_) => getIt<ProjectBloc>()),
         BlocProvider(create: (_) => getIt<TaskBloc>()),
         BlocProvider(create: (_) => getIt<MemberBloc>()),
+        BlocProvider(create: (_) => getIt<InviteBloc>()),
       ],
       child: const MyApp(),
     ),

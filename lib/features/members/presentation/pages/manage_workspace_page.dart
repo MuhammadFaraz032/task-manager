@@ -3,6 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
+import 'package:task_manager/features/members/presentation/bloc/invite_bloc.dart';
+import 'package:task_manager/features/members/presentation/bloc/invite_event.dart';
+import 'package:task_manager/features/members/presentation/bloc/invite_state.dart';
 import 'package:task_manager/features/members/presentation/bloc/member_bloc.dart';
 import 'package:task_manager/features/members/presentation/bloc/member_event.dart';
 import 'package:task_manager/features/members/presentation/bloc/member_state.dart';
@@ -21,13 +24,17 @@ class _ManageWorkspacePageState extends State<ManageWorkspacePage> {
   void initState() {
     super.initState();
     _loadMembers();
+    _loadInvites();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       GoRouter.of(context).routerDelegate.addListener(_onRouteChange);
     });
   }
 
   void _onRouteChange() {
-    if (mounted) _loadMembers();
+    if (mounted) {
+      _loadMembers();
+      _loadInvites();
+    }
   }
 
   @override
@@ -38,7 +45,6 @@ class _ManageWorkspacePageState extends State<ManageWorkspacePage> {
 
   void _loadMembers() {
     final workspaceState = context.read<WorkspaceCubit>().state;
-    final authState = context.read<AuthBloc>().state;
     if (workspaceState is WorkspaceLoaded) {
       context.read<MemberBloc>().add(
             MembersLoadRequested(
@@ -47,8 +53,12 @@ class _ManageWorkspacePageState extends State<ManageWorkspacePage> {
             ),
           );
     }
+  }
+
+  void _loadInvites() {
+    final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<MemberBloc>().add(
+      context.read<InviteBloc>().add(
             PendingInvitesLoadRequested(userEmail: authState.user.email),
           );
     }
@@ -63,7 +73,7 @@ class _ManageWorkspacePageState extends State<ManageWorkspacePage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => BlocProvider.value(
-        value: context.read<MemberBloc>(),
+        value: context.read<InviteBloc>(),
         child: const _InviteMemberSheet(),
       ),
     );
@@ -75,11 +85,10 @@ class _ManageWorkspacePageState extends State<ManageWorkspacePage> {
       appBar: AppBar(
         title: const Text('Manage Workspace'),
         actions: [
-          BlocBuilder<MemberBloc, MemberState>(
+          BlocBuilder<InviteBloc, InviteState>(
             builder: (context, state) {
-              final count = state is PendingInvitesLoaded
-                  ? state.invites.length
-                  : 0;
+              final count =
+                  state is PendingInvitesLoaded ? state.invites.length : 0;
               return Stack(
                 children: [
                   IconButton(
@@ -117,75 +126,83 @@ class _ManageWorkspacePageState extends State<ManageWorkspacePage> {
         icon: const Icon(Icons.person_add_outlined),
         label: const Text('Add Member'),
       ),
-      body: BlocConsumer<MemberBloc, MemberState>(
-         listener: (context, state) {
-          if (state is InviteSent) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Invite sent successfully')),
-            );
-            _loadMembers();
-          }
-          if (state is InviteAccepted || state is InviteDeclined) {
-            _loadMembers();
-          }
-          // if (state is MemberError) {
-          //   ScaffoldMessenger.of(
-          //     context,
-          //   ).showSnackBar(SnackBar(content: Text(state.message)));
-          // }
-        },
-        builder: (context, state) {
-          if (state is MemberLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: MultiBlocListener(
+        listeners: [
+          BlocListener<InviteBloc, InviteState>(
+            listener: (context, state) {
+              if (state is InviteSent) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Invite sent successfully')),
+                );
+                _loadInvites();
+              }
+              if (state is InviteAccepted || state is InviteDeclined) {
+                _loadMembers();
+                _loadInvites();
+              }
+              if (state is InviteError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(state.message)),
+                );
+              }
+            },
+          ),
+        ],
+        child: BlocBuilder<MemberBloc, MemberState>(
+          builder: (context, state) {
+            if (state is MemberLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (state is MembersLoaded) {
-            if (state.members.isEmpty) {
-              return const Center(
-                child: Text('No members yet. Invite someone!'),
+            if (state is MembersLoaded) {
+              if (state.members.isEmpty) {
+                return const Center(
+                  child: Text('No members yet. Invite someone!'),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: state.members.length,
+                itemBuilder: (context, index) {
+                  final member = state.members[index];
+                  final authState = context.read<AuthBloc>().state;
+                  final isMe = authState is AuthAuthenticated &&
+                      authState.user.uid == member.uid;
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                      child: Text(
+                        member.fullName.isNotEmpty
+                            ? member.fullName[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                        '${member.fullName}${isMe ? ' (You)' : ''}'),
+                    subtitle: Text(member.email),
+                    trailing: member.jobTitle != null
+                        ? Text(
+                            member.jobTitle!,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          )
+                        : null,
+                  );
+                },
               );
             }
 
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.members.length,
-              itemBuilder: (context, index) {
-                final member = state.members[index];
-                final authState = context.read<AuthBloc>().state;
-                final isMe =
-                    authState is AuthAuthenticated &&
-                    authState.user.uid == member.uid;
-
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.primaryContainer,
-                    child: Text(
-                      member.fullName.isNotEmpty
-                          ? member.fullName[0].toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  title: Text('${member.fullName}${isMe ? ' (You)' : ''}'),
-                  subtitle: Text(member.email),
-                  trailing: member.jobTitle != null
-                      ? Text(
-                          member.jobTitle!,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        )
-                      : null,
-                );
-              },
-            );
-          }
-
-          return const SizedBox();
-        },
+            return const SizedBox();
+          },
+        ),
       ),
     );
   }
@@ -217,13 +234,13 @@ class _InviteMemberSheetState extends State<_InviteMemberSheet> {
     if (workspaceState is! WorkspaceLoaded) return;
     if (authState is! AuthAuthenticated) return;
 
-    context.read<MemberBloc>().add(
-      InviteUserRequested(
-        workspaceId: workspaceState.workspace.id,
-        email: _emailController.text.trim(),
-        invitedBy: authState.user.uid,
-      ),
-    );
+    context.read<InviteBloc>().add(
+          InviteUserRequested(
+            workspaceId: workspaceState.workspace.id,
+            email: _emailController.text.trim(),
+            invitedBy: authState.user.uid,
+          ),
+        );
 
     Navigator.pop(context);
   }
@@ -245,16 +262,18 @@ class _InviteMemberSheetState extends State<_InviteMemberSheet> {
           children: [
             Text(
               'Invite Member',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               'Enter the email address of the person you want to invite.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Colors.grey),
             ),
             const SizedBox(height: 24),
             TextFormField(

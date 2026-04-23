@@ -13,6 +13,7 @@ import 'package:task_manager/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:task_manager/features/auth/domain/usecases/register_usecase.dart';
 import 'package:task_manager/features/auth/domain/usecases/update_user_usecase.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:task_manager/features/members/presentation/bloc/invite_bloc.dart';
 import 'package:task_manager/features/tasks/data/datasources/task_remote_datasource.dart';
 import 'package:task_manager/features/tasks/data/repositories/task_repository_impl.dart';
 import 'package:task_manager/features/tasks/domain/repositories/task_repository.dart';
@@ -213,10 +214,15 @@ Future<void> setupDependencies() async {
   getIt.registerFactory(
     () => MemberBloc(
       getWorkspaceMembersUseCase: getIt(),
+    ),
+  );
+
+  getIt.registerFactory(
+    () => InviteBloc(
+      getPendingInvitesUseCase: getIt(),
       inviteUserUseCase: getIt(),
       acceptInviteUseCase: getIt(),
       declineInviteUseCase: getIt(),
-      getPendingInvitesUseCase: getIt(),
     ),
   );
 }

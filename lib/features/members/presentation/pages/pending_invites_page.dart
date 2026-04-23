@@ -3,9 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
 import 'package:task_manager/features/members/domain/entities/member_entity.dart';
-import 'package:task_manager/features/members/presentation/bloc/member_bloc.dart';
-import 'package:task_manager/features/members/presentation/bloc/member_event.dart';
-import 'package:task_manager/features/members/presentation/bloc/member_state.dart';
+import 'package:task_manager/features/members/presentation/bloc/invite_bloc.dart';
+import 'package:task_manager/features/members/presentation/bloc/invite_event.dart';
+import 'package:task_manager/features/members/presentation/bloc/invite_state.dart';
 
 class PendingInvitesPage extends StatefulWidget {
   const PendingInvitesPage({super.key});
@@ -24,7 +24,7 @@ class _PendingInvitesPageState extends State<PendingInvitesPage> {
   void _loadInvites() {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<MemberBloc>().add(
+      context.read<InviteBloc>().add(
             PendingInvitesLoadRequested(userEmail: authState.user.email),
           );
     }
@@ -34,7 +34,7 @@ class _PendingInvitesPageState extends State<PendingInvitesPage> {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
 
-    context.read<MemberBloc>().add(
+    context.read<InviteBloc>().add(
           AcceptInviteRequested(
             workspaceId: invite.invitedBy,
             inviteId: invite.id,
@@ -44,7 +44,7 @@ class _PendingInvitesPageState extends State<PendingInvitesPage> {
   }
 
   void _decline(InviteEntity invite) {
-    context.read<MemberBloc>().add(
+    context.read<InviteBloc>().add(
           DeclineInviteRequested(
             workspaceId: invite.invitedBy,
             inviteId: invite.id,
@@ -60,7 +60,7 @@ class _PendingInvitesPageState extends State<PendingInvitesPage> {
       appBar: AppBar(
         title: const Text('Pending Invites'),
       ),
-      body: BlocConsumer<MemberBloc, MemberState>(
+      body: BlocConsumer<InviteBloc, InviteState>(
         listener: (context, state) {
           if (state is InviteAccepted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -74,13 +74,18 @@ class _PendingInvitesPageState extends State<PendingInvitesPage> {
             );
             _loadInvites();
           }
+          if (state is InviteError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
+          }
         },
         builder: (context, state) {
-          if (state is MemberLoading) {
+          if (state is InviteLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is MemberError) {
+          if (state is InviteError) {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -127,6 +132,10 @@ class _PendingInvitesPageState extends State<PendingInvitesPage> {
                         color: cs.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
+                  //   TextButton(
+                  //   onPressed: _loadInvites,
+                  //   child: const Text('Try again'),
+                  // ),
                   ],
                 ),
               );
