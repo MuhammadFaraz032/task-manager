@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:task_manager/core/theme/themecolors.dart';
+import 'package:task_manager/features/auth/domain/entities/user_entity.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
+import 'package:task_manager/features/members/presentation/bloc/member_bloc.dart';
+import 'package:task_manager/features/members/presentation/bloc/member_event.dart';
+import 'package:task_manager/features/members/presentation/bloc/member_state.dart';
 import 'package:task_manager/features/tasks/domain/entities/task_entity.dart';
 import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
 import 'package:task_manager/features/tasks/presentation/bloc/task_event.dart';
@@ -13,8 +17,9 @@ import 'package:uuid/uuid.dart';
 
 class AddTaskPage extends StatefulWidget {
   final String? projectId;
+  final TaskEntity? task; // if provided → edit mode
 
-  const AddTaskPage({super.key, this.projectId});
+  const AddTaskPage({super.key, this.projectId, this.task});
 
   @override
   State<AddTaskPage> createState() => _AddTaskPageState();
@@ -22,17 +27,56 @@ class AddTaskPage extends StatefulWidget {
 
 class _AddTaskPageState extends State<AddTaskPage> {
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController =
-      TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _assigneeController = TextEditingController();
   final List<TextEditingController> _checklistControllers = [];
 
   TaskPriority _selectedPriority = TaskPriority.none;
   DateTime? _selectedDate;
+  UserEntity? _selectedAssignee;
+
+  bool get _isEditing => widget.task != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMembers();
+    _prefillIfEditing();
+  }
+
+  void _prefillIfEditing() {
+    final task = widget.task;
+    if (task == null) return;
+
+    _titleController.text = task.title;
+    _descriptionController.text = task.description;
+    _selectedPriority = task.priority;
+    _selectedDate = task.dueDate;
+
+    // Pre-fill checklist controllers
+    for (final item in task.checklist) {
+      final controller = TextEditingController(text: item.title);
+      _checklistControllers.add(controller);
+    }
+  }
+
+  void _loadMembers() {
+    final workspaceState = context.read<WorkspaceCubit>().state;
+    if (workspaceState is WorkspaceLoaded) {
+      context.read<MemberBloc>().add(
+            MembersLoadRequested(
+              workspaceId: workspaceState.workspace.id,
+              memberIds: workspaceState.workspace.members,
+            ),
+          );
+    }
+  }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _assigneeController.dispose();
     for (final c in _checklistControllers) {
       c.dispose();
     }
@@ -57,28 +101,66 @@ class _AddTaskPageState extends State<AddTaskPage> {
     if (workspaceState is! WorkspaceLoaded) return;
     if (authState is! AuthAuthenticated) return;
 
-    // Build checklist from controllers
-    final checklist = _checklistControllers
-        .where((c) => c.text.trim().isNotEmpty)
-        .map((c) => ChecklistItem(
-              id: const Uuid().v4(),
-              title: c.text.trim(),
-              isCompleted: false,
-            ))
-        .toList();
+    if (_isEditing) {
+      // Edit mode — preserve existing checklist completion state
+      final existingChecklist = widget.task!.checklist;
+      final updatedChecklist = _checklistControllers
+          .where((c) => c.text.trim().isNotEmpty)
+          .toList()
+          .asMap()
+          .entries
+          .map((entry) {
+            final index = entry.key;
+            final controller = entry.value;
+            // Keep existing isCompleted if item existed before
+            final existing = index < existingChecklist.length
+                ? existingChecklist[index]
+                : null;
+            return ChecklistItem(
+              id: existing?.id ?? const Uuid().v4(),
+              title: controller.text.trim(),
+              isCompleted: existing?.isCompleted ?? false,
+            );
+          })
+          .toList();
 
-    context.read<TaskBloc>().add(
-          TaskCreateRequested(
-            title: _titleController.text.trim(),
-            description: _descriptionController.text.trim(),
-            workspaceId: workspaceState.workspace.id,
-            createdBy: authState.user.uid,
-            projectId: widget.projectId,
-            priority: _selectedPriority,
-            dueDate: _selectedDate,
-            checklist: checklist,
-          ),
-        );
+      context.read<TaskBloc>().add(
+            TaskUpdateRequested(
+              taskId: widget.task!.id,
+              title: _titleController.text.trim(),
+              description: _descriptionController.text.trim(),
+              priority: _selectedPriority,
+              status: widget.task!.status,
+              dueDate: _selectedDate,
+              checklist: updatedChecklist,
+              assignedTo: _selectedAssignee?.uid ?? widget.task!.assignedTo,
+            ),
+          );
+    } else {
+      // Create mode
+      final checklist = _checklistControllers
+          .where((c) => c.text.trim().isNotEmpty)
+          .map((c) => ChecklistItem(
+                id: const Uuid().v4(),
+                title: c.text.trim(),
+                isCompleted: false,
+              ))
+          .toList();
+
+      context.read<TaskBloc>().add(
+            TaskCreateRequested(
+              title: _titleController.text.trim(),
+              description: _descriptionController.text.trim(),
+              workspaceId: workspaceState.workspace.id,
+              createdBy: authState.user.uid,
+              projectId: widget.projectId,
+              priority: _selectedPriority,
+              dueDate: _selectedDate,
+              checklist: checklist,
+              assignedTo: _selectedAssignee?.uid,
+            ),
+          );
+    }
   }
 
   @override
@@ -91,7 +173,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Task created!'),
+              content: Text(_isEditing ? 'Task updated!' : 'Task created!'),
               backgroundColor: cs.primary,
               behavior: SnackBarBehavior.floating,
             ),
@@ -111,10 +193,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
         backgroundColor: cs.surface,
         body: Column(
           children: [
-            /// Header
-            _SheetHeader(cs: cs),
-
-            /// Scrollable Content
+            _SheetHeader(cs: cs, isEditing: _isEditing),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
@@ -162,8 +241,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
                       child: TextField(
                         controller: _descriptionController,
                         maxLines: null,
-                        style:
-                            TextStyle(fontSize: 16, color: cs.onSurface),
+                        style: TextStyle(fontSize: 16, color: cs.onSurface),
                         decoration: InputDecoration(
                           hintText: 'Add details about this task...',
                           hintStyle: TextStyle(
@@ -175,6 +253,59 @@ class _AddTaskPageState extends State<AddTaskPage> {
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    /// Assign To
+                    _SectionLabel(
+                      icon: Icons.person_outline_rounded,
+                      label: 'ASSIGN TO',
+                      cs: cs,
+                    ),
+                    const SizedBox(height: 8),
+                    BlocBuilder<MemberBloc, MemberState>(
+                      builder: (context, state) {
+                        final members = state is MembersLoaded
+                            ? state.members
+                            : <UserEntity>[];
+
+                        // Pre-fill assignee name if editing
+                        if (_isEditing &&
+                            _selectedAssignee == null &&
+                            widget.task!.assignedTo != null &&
+                            _assigneeController.text.isEmpty) {
+                          try {
+                            final existing = members.firstWhere(
+                              (m) => m.uid == widget.task!.assignedTo,
+                            );
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) {
+                                setState(() {
+                                  _selectedAssignee = existing;
+                                  _assigneeController.text =
+                                      '${existing.fullName} (${existing.email})';
+                                });
+                              }
+                            });
+                          } catch (_) {}
+                        }
+
+                        return _AssigneeSearchField(
+                          cs: cs,
+                          controller: _assigneeController,
+                          members: members,
+                          selectedAssignee: _selectedAssignee,
+                          onAssigneeSelected: (member) {
+                            setState(() {
+                              _selectedAssignee = member;
+                              _assigneeController.text = member != null
+                                  ? '${member.fullName} (${member.email})'
+                                  : '';
+                            });
+                          },
+                        );
+                      },
                     ),
 
                     const SizedBox(height: 24),
@@ -217,8 +348,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
                       controllers: _checklistControllers,
                       onAddItem: () {
                         setState(() {
-                          _checklistControllers
-                              .add(TextEditingController());
+                          _checklistControllers.add(TextEditingController());
                         });
                       },
                     ),
@@ -227,9 +357,9 @@ class _AddTaskPageState extends State<AddTaskPage> {
               ),
             ),
 
-            /// Sticky Footer
             _StickyFooter(
               cs: cs,
+              isEditing: _isEditing,
               onSave: () => _saveTask(context),
             ),
           ],
@@ -240,12 +370,191 @@ class _AddTaskPageState extends State<AddTaskPage> {
 }
 
 // ─────────────────────────────────────────────
+// ASSIGNEE SEARCH FIELD
+// ─────────────────────────────────────────────
+class _AssigneeSearchField extends StatefulWidget {
+  final ColorScheme cs;
+  final TextEditingController controller;
+  final List<UserEntity> members;
+  final UserEntity? selectedAssignee;
+  final ValueChanged<UserEntity?> onAssigneeSelected;
+
+  const _AssigneeSearchField({
+    required this.cs,
+    required this.controller,
+    required this.members,
+    required this.selectedAssignee,
+    required this.onAssigneeSelected,
+  });
+
+  @override
+  State<_AssigneeSearchField> createState() => _AssigneeSearchFieldState();
+}
+
+class _AssigneeSearchFieldState extends State<_AssigneeSearchField> {
+  List<UserEntity> _filtered = [];
+  bool _showDropdown = false;
+
+  void _onChanged(String query) {
+    if (query.isEmpty || widget.selectedAssignee != null) {
+      setState(() {
+        _filtered = [];
+        _showDropdown = false;
+      });
+      return;
+    }
+
+    final results = widget.members
+        .where((m) =>
+            m.email.toLowerCase().contains(query.toLowerCase()) ||
+            m.fullName.toLowerCase().contains(query.toLowerCase()))
+        .toList();
+
+    setState(() {
+      _filtered = results;
+      _showDropdown = results.isNotEmpty;
+    });
+  }
+
+  void _selectMember(UserEntity member) {
+    widget.onAssigneeSelected(member);
+    setState(() {
+      _showDropdown = false;
+      _filtered = [];
+    });
+  }
+
+  void _clearSelection() {
+    widget.onAssigneeSelected(null);
+    widget.controller.clear();
+    setState(() {
+      _showDropdown = false;
+      _filtered = [];
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = widget.cs;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: TextField(
+            controller: widget.controller,
+            readOnly: widget.selectedAssignee != null,
+            onChanged: _onChanged,
+            style: TextStyle(fontSize: 15, color: cs.onSurface),
+            decoration: InputDecoration(
+              hintText: 'Search by name or email...',
+              hintStyle: TextStyle(
+                fontSize: 15,
+                color: cs.onSurface.withValues(alpha: 0.4),
+              ),
+              prefixIcon: widget.selectedAssignee != null
+                  ? CircleAvatar(
+                      radius: 14,
+                      backgroundColor: cs.primaryContainer,
+                      child: Text(
+                        widget.selectedAssignee!.fullName.isNotEmpty
+                            ? widget.selectedAssignee!.fullName[0]
+                                .toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: cs.onPrimaryContainer,
+                        ),
+                      ),
+                    )
+                  : Icon(
+                      Icons.search_rounded,
+                      color: cs.onSurface.withValues(alpha: 0.4),
+                    ),
+              suffixIcon: widget.selectedAssignee != null
+                  ? IconButton(
+                      icon: Icon(Icons.close_rounded,
+                          color: cs.onSurface.withValues(alpha: 0.5)),
+                      onPressed: _clearSelection,
+                    )
+                  : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+            ),
+          ),
+        ),
+
+        if (_showDropdown)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: cs.outline),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _filtered.length,
+              separatorBuilder: (_, __) =>
+                  Divider(height: 1, color: cs.outline),
+              itemBuilder: (context, index) {
+                final member = _filtered[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: cs.primaryContainer,
+                    child: Text(
+                      member.fullName.isNotEmpty
+                          ? member.fullName[0].toUpperCase()
+                          : '?',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: cs.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                  title: Text(member.fullName),
+                  subtitle: Text(
+                    member.email,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  onTap: () => _selectMember(member),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
 // SHEET HEADER
 // ─────────────────────────────────────────────
 class _SheetHeader extends StatelessWidget {
   final ColorScheme cs;
+  final bool isEditing;
 
-  const _SheetHeader({required this.cs});
+  const _SheetHeader({required this.cs, required this.isEditing});
 
   @override
   Widget build(BuildContext context) {
@@ -285,7 +594,7 @@ class _SheetHeader extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'New Task',
+                    isEditing ? 'Edit Task' : 'New Task',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -688,9 +997,14 @@ class _ChecklistSection extends StatelessWidget {
 // ─────────────────────────────────────────────
 class _StickyFooter extends StatelessWidget {
   final ColorScheme cs;
+  final bool isEditing;
   final VoidCallback onSave;
 
-  const _StickyFooter({required this.cs, required this.onSave});
+  const _StickyFooter({
+    required this.cs,
+    required this.isEditing,
+    required this.onSave,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -741,11 +1055,16 @@ class _StickyFooter extends StatelessWidget {
                           strokeWidth: 2.5,
                         ),
                       )
-                    : const Icon(Icons.add_rounded,
-                        color: Colors.white, size: 20),
-                label: const Text(
-                  'Save Task',
-                  style: TextStyle(
+                    : Icon(
+                        isEditing
+                            ? Icons.save_outlined
+                            : Icons.add_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                label: Text(
+                  isEditing ? 'Save Changes' : 'Save Task',
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,

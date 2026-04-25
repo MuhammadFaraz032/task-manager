@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 enum TaskPriority { none, low, medium, high }
+
 enum TaskStatus { todo, inProgress, completed }
 
 class TaskEntity extends Equatable {
@@ -19,6 +20,7 @@ class TaskEntity extends Equatable {
   final DateTime? completedAt;
   final String? completedBy;
   final bool isDeleted;
+  final String? assignedTo;
 
   const TaskEntity({
     required this.id,
@@ -36,16 +38,30 @@ class TaskEntity extends Equatable {
     this.completedAt,
     this.completedBy,
     this.isDeleted = false,
+    this.assignedTo,
   });
 
   bool get isCompleted => status == TaskStatus.completed;
 
   @override
   List<Object?> get props => [
-        id, title, description, workspaceId, projectId,
-        createdBy, priority, status, dueDate, checklist,
-        createdAt, updatedAt, completedAt, completedBy, isDeleted,
-      ];
+    id,
+    title,
+    description,
+    workspaceId,
+    projectId,
+    createdBy,
+    priority,
+    status,
+    dueDate,
+    checklist,
+    createdAt,
+    updatedAt,
+    completedAt,
+    completedBy,
+    isDeleted,
+    assignedTo,
+  ];
 }
 
 class ChecklistItem extends Equatable {

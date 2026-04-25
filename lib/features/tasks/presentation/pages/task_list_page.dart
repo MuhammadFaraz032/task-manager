@@ -631,6 +631,38 @@ class _TaskCard extends StatelessWidget {
 
                         const Spacer(),
 
+                        if (task.assignedTo != null)
+                          Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: cs.secondaryContainer,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 10,
+                                  color: cs.onSecondaryContainer,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Assigned',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: cs.onSecondaryContainer,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
                         if (task.dueDate != null)
                           Row(
                             children: [

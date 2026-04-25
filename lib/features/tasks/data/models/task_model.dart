@@ -19,10 +19,10 @@ class TaskModel extends TaskEntity {
     super.completedAt,
     super.completedBy,
     super.isDeleted,
+    super.assignedTo,
   });
 
-  factory TaskModel.fromFirestore(
-      DocumentSnapshot<Map<String, dynamic>> doc) {
+  factory TaskModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data()!;
     return TaskModel(
       id: doc.id,
@@ -43,11 +43,13 @@ class TaskModel extends TaskEntity {
           ? (data['dueDate'] as Timestamp).toDate()
           : null,
       checklist: (data['checklist'] as List<dynamic>? ?? [])
-          .map((item) => ChecklistItem(
-                id: item['id'] ?? const Uuid().v4(),
-                title: item['title'] ?? '',
-                isCompleted: item['isCompleted'] ?? false,
-              ))
+          .map(
+            (item) => ChecklistItem(
+              id: item['id'] ?? const Uuid().v4(),
+              title: item['title'] ?? '',
+              isCompleted: item['isCompleted'] ?? false,
+            ),
+          )
           .toList(),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: data['updatedAt'] != null
@@ -58,6 +60,7 @@ class TaskModel extends TaskEntity {
           : null,
       completedBy: data['completedBy'],
       isDeleted: data['isDeleted'] ?? false,
+      assignedTo: data['assignedTo'] as String?,
     );
   }
 
@@ -72,18 +75,22 @@ class TaskModel extends TaskEntity {
       'status': status.name,
       'dueDate': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
       'checklist': checklist
-          .map((item) => {
-                'id': item.id,
-                'title': item.title,
-                'isCompleted': item.isCompleted,
-              })
+          .map(
+            (item) => {
+              'id': item.id,
+              'title': item.title,
+              'isCompleted': item.isCompleted,
+            },
+          )
           .toList(),
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': FieldValue.serverTimestamp(),
-      'completedAt':
-          completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'completedAt': completedAt != null
+          ? Timestamp.fromDate(completedAt!)
+          : null,
       'completedBy': completedBy,
       'isDeleted': isDeleted,
+      'assignedTo': assignedTo,
     };
   }
 }

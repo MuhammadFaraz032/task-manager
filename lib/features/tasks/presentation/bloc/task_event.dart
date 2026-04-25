@@ -12,10 +12,7 @@ class TasksLoadRequested extends TaskEvent {
   final String workspaceId;
   final String? projectId;
 
-  const TasksLoadRequested({
-    required this.workspaceId,
-    this.projectId,
-  });
+  const TasksLoadRequested({required this.workspaceId, this.projectId});
 
   @override
   List<Object?> get props => [workspaceId, projectId];
@@ -30,6 +27,7 @@ class TaskCreateRequested extends TaskEvent {
   final TaskPriority priority;
   final DateTime? dueDate;
   final List<ChecklistItem> checklist;
+  final String? assignedTo;
 
   const TaskCreateRequested({
     required this.title,
@@ -40,6 +38,7 @@ class TaskCreateRequested extends TaskEvent {
     required this.priority,
     this.dueDate,
     required this.checklist,
+    this.assignedTo,
   });
 
   @override
@@ -54,6 +53,7 @@ class TaskUpdateRequested extends TaskEvent {
   final TaskStatus status;
   final DateTime? dueDate;
   final List<ChecklistItem> checklist;
+  final String? assignedTo;
 
   const TaskUpdateRequested({
     required this.taskId,
@@ -63,6 +63,7 @@ class TaskUpdateRequested extends TaskEvent {
     required this.status,
     this.dueDate,
     required this.checklist,
+    this.assignedTo,
   });
 
   @override
@@ -73,10 +74,7 @@ class TaskToggleRequested extends TaskEvent {
   final String taskId;
   final String completedBy;
 
-  const TaskToggleRequested({
-    required this.taskId,
-    required this.completedBy,
-  });
+  const TaskToggleRequested({required this.taskId, required this.completedBy});
 
   @override
   List<Object?> get props => [taskId, completedBy];
@@ -86,10 +84,7 @@ class TaskDeleteRequested extends TaskEvent {
   final String taskId;
   final String deletedBy;
 
-  const TaskDeleteRequested({
-    required this.taskId,
-    required this.deletedBy,
-  });
+  const TaskDeleteRequested({required this.taskId, required this.deletedBy});
 
   @override
   List<Object?> get props => [taskId, deletedBy];
