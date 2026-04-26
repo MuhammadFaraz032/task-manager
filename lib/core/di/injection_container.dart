@@ -17,11 +17,15 @@ import 'package:task_manager/features/members/presentation/bloc/invite_bloc.dart
 import 'package:task_manager/features/tasks/data/datasources/task_remote_datasource.dart';
 import 'package:task_manager/features/tasks/data/repositories/task_repository_impl.dart';
 import 'package:task_manager/features/tasks/domain/repositories/task_repository.dart';
+import 'package:task_manager/features/tasks/domain/usecases/add_comment_usecase.dart';
 import 'package:task_manager/features/tasks/domain/usecases/create_task_usecase.dart';
+import 'package:task_manager/features/tasks/domain/usecases/delete_comment_usecase.dart';
 import 'package:task_manager/features/tasks/domain/usecases/delete_task_usecase.dart';
+import 'package:task_manager/features/tasks/domain/usecases/get_comments_usecase.dart';
 import 'package:task_manager/features/tasks/domain/usecases/get_tasks_usecase.dart';
 import 'package:task_manager/features/tasks/domain/usecases/toggle_task_usecase.dart';
 import 'package:task_manager/features/tasks/domain/usecases/update_task_usecase.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/comment_bloc.dart';
 import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
 
 // Workspace
@@ -211,11 +215,7 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton(() => GetPendingInvitesUseCase(getIt()));
 
   // BLoC — Factory because it has screen state
-  getIt.registerFactory(
-    () => MemberBloc(
-      getWorkspaceMembersUseCase: getIt(),
-    ),
-  );
+  getIt.registerFactory(() => MemberBloc(getWorkspaceMembersUseCase: getIt()));
 
   getIt.registerFactory(
     () => InviteBloc(
@@ -223,6 +223,24 @@ Future<void> setupDependencies() async {
       inviteUserUseCase: getIt(),
       acceptInviteUseCase: getIt(),
       declineInviteUseCase: getIt(),
+    ),
+  );
+
+  // ─────────────────────────────────────────────
+  // COMMENTS FEATURE
+  // ─────────────────────────────────────────────
+
+  // Use Cases — LazySingleton because stateless
+  getIt.registerLazySingleton(() => GetCommentsUseCase(getIt()));
+  getIt.registerLazySingleton(() => AddCommentUseCase(getIt()));
+  getIt.registerLazySingleton(() => DeleteCommentUseCase(getIt()));
+
+  // BLoC — Factory because scoped to task detail page
+  getIt.registerFactory(
+    () => CommentBloc(
+      getCommentsUseCase: getIt(),
+      addCommentUseCase: getIt(),
+      deleteCommentUseCase: getIt(),
     ),
   );
 }

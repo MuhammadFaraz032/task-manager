@@ -6,11 +6,17 @@ import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
 import 'package:task_manager/features/members/presentation/bloc/member_bloc.dart';
 import 'package:task_manager/features/members/presentation/bloc/member_state.dart';
+import 'package:task_manager/features/tasks/domain/entities/comment_entity.dart';
 import 'package:task_manager/features/tasks/domain/entities/task_entity.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/comment_bloc.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/comment_event.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/comment_state.dart';
 import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
 import 'package:task_manager/features/tasks/presentation/bloc/task_event.dart';
 import 'package:task_manager/features/tasks/presentation/bloc/task_state.dart';
 import 'package:task_manager/features/tasks/presentation/pages/add_task_page.dart';
+import 'package:task_manager/core/di/injection_container.dart';
+import 'package:task_manager/features/workspace/presentation/cubit/workspace_cubit.dart';
 
 class TaskDetailPage extends StatelessWidget {
   final String taskId;
@@ -20,9 +26,6 @@ class TaskDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-
-    // LEARNING: Get task from TaskBloc which already
-    // has all tasks loaded — no separate API call needed
     final taskState = context.watch<TaskBloc>().state;
     TaskEntity? task;
 
@@ -41,7 +44,13 @@ class TaskDetailPage extends StatelessWidget {
       );
     }
 
-    return _TaskDetailView(task: task);
+    // LEARNING: CommentBloc is scoped to this page only
+    // We use BlocProvider here to create a fresh instance
+    // that lives only as long as this page is open
+    return BlocProvider(
+      create: (_) => getIt<CommentBloc>(),
+      child: _TaskDetailView(task: task),
+    );
   }
 }
 
@@ -55,23 +64,79 @@ class _TaskDetailView extends StatefulWidget {
 }
 
 class _TaskDetailViewState extends State<_TaskDetailView> {
-  // LEARNING: Local checklist state for immediate UI feedback
-  // before Firestore confirms the update
   late List<ChecklistItem> _checklist;
+  final TextEditingController _commentController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _checklist = List.from(widget.task.checklist);
+    _loadComments();
   }
 
   @override
   void didUpdateWidget(_TaskDetailView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Sync checklist when task updates from Firestore
     if (oldWidget.task != widget.task) {
       _checklist = List.from(widget.task.checklist);
     }
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  void _loadComments() {
+    final workspaceId =
+        context.read<WorkspaceCubit>().currentWorkspaceId;
+    if (workspaceId != null) {
+      context.read<CommentBloc>().add(
+            CommentsLoadRequested(
+              workspaceId: workspaceId,
+              taskId: widget.task.id,
+            ),
+          );
+    }
+  }
+
+  void _addComment() {
+    final text = _commentController.text.trim();
+    if (text.isEmpty) return;
+
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
+
+    final workspaceId =
+        context.read<WorkspaceCubit>().currentWorkspaceId;
+    if (workspaceId == null) return;
+
+    context.read<CommentBloc>().add(
+          CommentAddRequested(
+            workspaceId: workspaceId,
+            taskId: widget.task.id,
+            text: text,
+            createdBy: authState.user.uid,
+            createdByName: authState.user.fullName,
+          ),
+        );
+
+    _commentController.clear();
+  }
+
+  void _deleteComment(String commentId) {
+    final workspaceId =
+        context.read<WorkspaceCubit>().currentWorkspaceId;
+    if (workspaceId == null) return;
+
+    context.read<CommentBloc>().add(
+          CommentDeleteRequested(
+            workspaceId: workspaceId,
+            taskId: widget.task.id,
+            commentId: commentId,
+          ),
+        );
   }
 
   void _toggleChecklist(int index) {
@@ -84,18 +149,17 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
       );
     });
 
-    // Save updated checklist to Firestore
     context.read<TaskBloc>().add(
-      TaskUpdateRequested(
-        taskId: widget.task.id,
-        title: widget.task.title,
-        description: widget.task.description,
-        priority: widget.task.priority,
-        status: widget.task.status,
-        dueDate: widget.task.dueDate,
-        checklist: _checklist,
-      ),
-    );
+          TaskUpdateRequested(
+            taskId: widget.task.id,
+            title: widget.task.title,
+            description: widget.task.description,
+            priority: widget.task.priority,
+            status: widget.task.status,
+            dueDate: widget.task.dueDate,
+            checklist: _checklist,
+          ),
+        );
   }
 
   void _toggleComplete() {
@@ -103,11 +167,11 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
     if (authState is! AuthAuthenticated) return;
 
     context.read<TaskBloc>().add(
-      TaskToggleRequested(
-        taskId: widget.task.id,
-        completedBy: authState.user.uid,
-      ),
-    );
+          TaskToggleRequested(
+            taskId: widget.task.id,
+            completedBy: authState.user.uid,
+          ),
+        );
   }
 
   void _deleteTask() {
@@ -120,9 +184,8 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
         final cs = Theme.of(context).colorScheme;
         return AlertDialog(
           backgroundColor: cs.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text('Delete Task', style: TextStyle(color: cs.onSurface)),
           content: Text(
             'Are you sure you want to delete "${widget.task.title}"?',
@@ -137,11 +200,11 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
               onPressed: () {
                 Navigator.pop(dialogContext);
                 context.read<TaskBloc>().add(
-                  TaskDeleteRequested(
-                    taskId: widget.task.id,
-                    deletedBy: authState.user.uid,
-                  ),
-                );
+                      TaskDeleteRequested(
+                        taskId: widget.task.id,
+                        deletedBy: authState.user.uid,
+                      ),
+                    );
                 if (context.canPop()) {
                   context.pop();
                 } else {
@@ -168,7 +231,8 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
           height: MediaQuery.of(context).size.height * 0.92,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: AddTaskPage(task: widget.task),
         ),
@@ -179,20 +243,18 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
   String _formatDueDate(DateTime? dueDate) {
     if (dueDate == null) return 'No due date';
     final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     return '${months[dueDate.month - 1]} ${dueDate.day}, ${dueDate.year}';
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 
   Color _priorityColor(ColorScheme cs) {
@@ -212,11 +274,10 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final task = widget.task;
-
     final completedCount = _checklist.where((c) => c.isCompleted).length;
-    final progress = _checklist.isEmpty
-        ? 0.0
-        : completedCount / _checklist.length;
+    final progress =
+        _checklist.isEmpty ? 0.0 : completedCount / _checklist.length;
+    final authState = context.read<AuthBloc>().state;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -226,8 +287,8 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
           SafeArea(
             bottom: false,
             child: Container(
-              // height: 53,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: cs.surface,
                 border: Border(bottom: BorderSide(color: cs.outline)),
@@ -246,11 +307,8 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                     borderRadius: BorderRadius.circular(8),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.arrow_back_ios_rounded,
-                          size: 14,
-                          color: cs.primary,
-                        ),
+                        Icon(Icons.arrow_back_ios_rounded,
+                            size: 14, color: cs.primary),
                         Text(
                           'Back',
                           style: TextStyle(
@@ -271,37 +329,11 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                       color: cs.onSurface,
                     ),
                   ),
-                  // Column(
-                  //   mainAxisAlignment: MainAxisAlignment.center,
-                  //   children: [
-                  //     Text(
-                  //       task.projectId != null ? 'PROJECT TASK' : 'STANDALONE',
-                  //       style: TextStyle(
-                  //         fontSize: 12,
-                  //         fontWeight: FontWeight.w700,
-                  //         letterSpacing: 0.5,
-                  //         color: cs.onSurface,
-                  //       ),
-                  //     ),
-                  //     // Text(
-                  //     //   task.title,
-                  //     //   style: TextStyle(
-                  //     //     fontSize: 14,
-                  //     //     fontWeight: FontWeight.w600,
-                  //     //     color: cs.onSurface,
-                  //     //   ),
-                  //     //   overflow: TextOverflow.ellipsis,
-                  //     // ),
-                  //   ],
-                  // ),
                   InkWell(
                     onTap: _editTask,
                     borderRadius: BorderRadius.circular(8),
-                    child: Icon(
-                      Icons.edit_outlined,
-                      size: 20,
-                      color: cs.primary,
-                    ),
+                    child: Icon(Icons.edit_outlined,
+                        size: 20, color: cs.primary),
                   ),
                 ],
               ),
@@ -342,8 +374,7 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                             decoration: const BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
-                                colors: AppColors.brandGradient,
-                              ),
+                                  colors: AppColors.brandGradient),
                             ),
                           ),
                         ),
@@ -364,11 +395,11 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                                   ),
                                 ),
                                 const SizedBox(width: 16),
-                                // Completion circle
                                 GestureDetector(
                                   onTap: _toggleComplete,
                                   child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
+                                    duration:
+                                        const Duration(milliseconds: 200),
                                     width: 28,
                                     height: 28,
                                     margin: const EdgeInsets.only(top: 4),
@@ -380,18 +411,14 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                                       border: Border.all(
                                         color: task.isCompleted
                                             ? cs.primary
-                                            : cs.onSurface.withValues(
-                                                alpha: 0.3,
-                                              ),
+                                            : cs.onSurface
+                                                .withValues(alpha: 0.3),
                                         width: 2,
                                       ),
                                     ),
                                     child: task.isCompleted
-                                        ? const Icon(
-                                            Icons.check_rounded,
-                                            size: 14,
-                                            color: Colors.white,
-                                          )
+                                        ? const Icon(Icons.check_rounded,
+                                            size: 14, color: Colors.white)
                                         : null,
                                   ),
                                 ),
@@ -405,35 +432,29 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                                 // Due date chip
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
+                                      horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: cs.surface,
                                     border: Border.all(color: cs.outline),
-                                    borderRadius: BorderRadius.circular(999),
+                                    borderRadius:
+                                        BorderRadius.circular(999),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(
-                                        Icons.calendar_today_rounded,
-                                        size: 12,
-                                        color: cs.onSurface.withValues(
-                                          alpha: 0.4,
-                                        ),
-                                      ),
+                                      Icon(Icons.calendar_today_rounded,
+                                          size: 12,
+                                          color: cs.onSurface
+                                              .withValues(alpha: 0.4)),
                                       const SizedBox(width: 6),
                                       Text(
-                                        _formatDueDate(
-                                          task.dueDate,
-                                        ).toUpperCase(),
+                                        _formatDueDate(task.dueDate)
+                                            .toUpperCase(),
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w700,
-                                          color: cs.onSurface.withValues(
-                                            alpha: 0.7,
-                                          ),
+                                          color: cs.onSurface
+                                              .withValues(alpha: 0.7),
                                         ),
                                       ),
                                     ],
@@ -443,28 +464,22 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                                 if (task.priority != TaskPriority.none)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
+                                        horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: _priorityColor(
-                                        cs,
-                                      ).withValues(alpha: 0.1),
+                                      color: _priorityColor(cs)
+                                          .withValues(alpha: 0.1),
                                       border: Border.all(
-                                        color: _priorityColor(
-                                          cs,
-                                        ).withValues(alpha: 0.3),
-                                      ),
-                                      borderRadius: BorderRadius.circular(999),
+                                          color: _priorityColor(cs)
+                                              .withValues(alpha: 0.3)),
+                                      borderRadius:
+                                          BorderRadius.circular(999),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(
-                                          Icons.flag_rounded,
-                                          size: 12,
-                                          color: _priorityColor(cs),
-                                        ),
+                                        Icon(Icons.flag_rounded,
+                                            size: 12,
+                                            color: _priorityColor(cs)),
                                         const SizedBox(width: 6),
                                         Text(
                                           '${task.priority.name.toUpperCase()} PRIORITY',
@@ -477,31 +492,6 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                                       ],
                                     ),
                                   ),
-
-                                // Status chip
-                                // Status chip
-                                // Container(
-                                //   padding: const EdgeInsets.symmetric(
-                                //     horizontal: 12,
-                                //     vertical: 6,
-                                //   ),
-                                //   decoration: BoxDecoration(
-                                //     color: task.isCompleted
-                                //         ? cs.primary.withValues(alpha: 0.1)
-                                //         : cs.surfaceContainerHighest,
-                                //     borderRadius: BorderRadius.circular(999),
-                                //   ),
-                                //   child: Text(
-                                //     task.status.name.toUpperCase(),
-                                //     style: TextStyle(
-                                //       fontSize: 12,
-                                //       fontWeight: FontWeight.w700,
-                                //       color: task.isCompleted
-                                //           ? cs.primary
-                                //           : cs.onSurface.withValues(alpha: 0.5),
-                                //     ),
-                                //   ),
-                                // ),
                               ],
                             ),
                           ],
@@ -521,18 +511,16 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
 
                       String createdByName = 'Someone';
                       try {
-                        final creator = members.firstWhere(
-                          (m) => m.uid == task.createdBy,
-                        );
+                        final creator = members
+                            .firstWhere((m) => m.uid == task.createdBy);
                         createdByName = creator.fullName;
                       } catch (_) {}
 
                       String? assigneeName;
                       if (task.assignedTo != null) {
                         try {
-                          final assignee = members.firstWhere(
-                            (m) => m.uid == task.assignedTo,
-                          );
+                          final assignee = members
+                              .firstWhere((m) => m.uid == task.assignedTo);
                           assigneeName = assignee.fullName;
                         } catch (_) {}
                       }
@@ -560,8 +548,6 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                       );
                     },
                   ),
-
-                  const SizedBox(height: 16),
 
                   const SizedBox(height: 16),
 
@@ -613,7 +599,8 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
                                 'CHECKLIST',
@@ -621,7 +608,8 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 1.2,
-                                  color: cs.onSurface.withValues(alpha: 0.4),
+                                  color:
+                                      cs.onSurface.withValues(alpha: 0.4),
                                 ),
                               ),
                               Text(
@@ -635,7 +623,6 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          // Progress bar
                           Stack(
                             children: [
                               Container(
@@ -643,7 +630,8 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                                 height: 8,
                                 decoration: BoxDecoration(
                                   color: cs.outline,
-                                  borderRadius: BorderRadius.circular(999),
+                                  borderRadius:
+                                      BorderRadius.circular(999),
                                 ),
                               ),
                               FractionallySizedBox(
@@ -652,16 +640,15 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                                   height: 8,
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
-                                      colors: AppColors.brandGradient,
-                                    ),
-                                    borderRadius: BorderRadius.circular(999),
+                                        colors: AppColors.brandGradient),
+                                    borderRadius:
+                                        BorderRadius.circular(999),
                                   ),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
-                          // Checklist items
                           ..._checklist.asMap().entries.map((entry) {
                             final index = entry.key;
                             final item = entry.value;
@@ -675,15 +662,16 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     color: cs.surface,
-                                    border: Border.all(color: cs.outline),
-                                    borderRadius: BorderRadius.circular(24),
+                                    border:
+                                        Border.all(color: cs.outline),
+                                    borderRadius:
+                                        BorderRadius.circular(24),
                                   ),
                                   child: Row(
                                     children: [
                                       AnimatedContainer(
                                         duration: const Duration(
-                                          milliseconds: 200,
-                                        ),
+                                            milliseconds: 200),
                                         width: 24,
                                         height: 24,
                                         decoration: BoxDecoration(
@@ -691,21 +679,18 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                                               ? cs.primary
                                               : Colors.transparent,
                                           border: Border.all(
-                                            color: cs.onSurface.withValues(
-                                              alpha: 0.3,
-                                            ),
+                                            color: cs.onSurface
+                                                .withValues(alpha: 0.3),
                                             width: 2,
                                           ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: item.isCompleted
                                             ? const Icon(
                                                 Icons.check_rounded,
                                                 size: 14,
-                                                color: Colors.white,
-                                              )
+                                                color: Colors.white)
                                             : null,
                                       ),
                                       const SizedBox(width: 12),
@@ -715,12 +700,10 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
                                           color: item.isCompleted
-                                              ? cs.onSurface.withValues(
-                                                  alpha: 0.4,
-                                                )
-                                              : cs.onSurface.withValues(
-                                                  alpha: 0.9,
-                                                ),
+                                              ? cs.onSurface
+                                                  .withValues(alpha: 0.4)
+                                              : cs.onSurface
+                                                  .withValues(alpha: 0.9),
                                           decoration: item.isCompleted
                                               ? TextDecoration.lineThrough
                                               : null,
@@ -735,6 +718,153 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                         ],
                       ),
                     ),
+
+                  const SizedBox(height: 16),
+
+                  /// Comments Section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'COMMENTS',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.2,
+                                color: cs.onSurface.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            BlocBuilder<CommentBloc, CommentState>(
+                              builder: (context, state) {
+                                final count = state is CommentsLoaded
+                                    ? state.comments.length
+                                    : 0;
+                                return Text(
+                                  '$count comment${count == 1 ? '' : 's'}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: cs.primary,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Comment input
+                        Container(
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: cs.outline),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _commentController,
+                                  style: TextStyle(
+                                      fontSize: 14, color: cs.onSurface),
+                                  decoration: InputDecoration(
+                                    hintText: 'Add a comment...',
+                                    hintStyle: TextStyle(
+                                      fontSize: 14,
+                                      color: cs.onSurface
+                                          .withValues(alpha: 0.4),
+                                    ),
+                                    border: InputBorder.none,
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 12),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: GestureDetector(
+                                  onTap: _addComment,
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: cs.primary,
+                                      borderRadius:
+                                          BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.send_rounded,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Comments list
+                        BlocBuilder<CommentBloc, CommentState>(
+                          builder: (context, state) {
+                            if (state is CommentLoading) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
+
+                            if (state is CommentsLoaded) {
+                              if (state.comments.isEmpty) {
+                                return Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(24),
+                                    child: Text(
+                                      'No comments yet. Be the first!',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: cs.onSurface
+                                            .withValues(alpha: 0.4),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              return Column(
+                                children: state.comments
+                                    .map((comment) => _CommentCard(
+                                          cs: cs,
+                                          comment: comment,
+                                          isOwner: authState
+                                                  is AuthAuthenticated &&
+                                              authState.user.uid ==
+                                                  comment.createdBy,
+                                          timeAgo:
+                                              _timeAgo(comment.createdAt),
+                                          onDelete: () =>
+                                              _deleteComment(comment.id),
+                                        ))
+                                    .toList(),
+                              );
+                            }
+
+                            return const SizedBox();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -749,7 +879,6 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
             ),
             child: Row(
               children: [
-                /// Mark Complete / Reopen
                 Expanded(
                   child: GestureDetector(
                     onTap: _toggleComplete,
@@ -770,10 +899,8 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                         borderRadius: BorderRadius.circular(24),
                         border: task.isCompleted
                             ? Border.all(
-                                color: const Color(
-                                  0xFFF59E0B,
-                                ).withValues(alpha: 0.4),
-                              )
+                                color: const Color(0xFFF59E0B)
+                                    .withValues(alpha: 0.4))
                             : null,
                         boxShadow: task.isCompleted
                             ? []
@@ -815,10 +942,7 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 12),
-
-                /// Delete Button
                 InkWell(
                   onTap: _deleteTask,
                   borderRadius: BorderRadius.circular(24),
@@ -828,15 +952,11 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
                     decoration: BoxDecoration(
                       color: cs.error.withValues(alpha: 0.1),
                       border: Border.all(
-                        color: cs.error.withValues(alpha: 0.2),
-                      ),
+                          color: cs.error.withValues(alpha: 0.2)),
                       borderRadius: BorderRadius.circular(24),
                     ),
-                    child: Icon(
-                      Icons.delete_outline_rounded,
-                      size: 18,
-                      color: cs.error,
-                    ),
+                    child: Icon(Icons.delete_outline_rounded,
+                        size: 18, color: cs.error),
                   ),
                 ),
               ],
@@ -848,12 +968,124 @@ class _TaskDetailViewState extends State<_TaskDetailView> {
   }
 }
 
+// ─────────────────────────────────────────────
+// COMMENT CARD
+// ─────────────────────────────────────────────
+class _CommentCard extends StatelessWidget {
+  final ColorScheme cs;
+  final CommentEntity comment;
+  final bool isOwner;
+  final String timeAgo;
+  final VoidCallback onDelete;
+
+  const _CommentCard({
+    required this.cs,
+    required this.comment,
+    required this.isOwner,
+    required this.timeAgo,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          border: Border.all(color: cs.outline),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: cs.primaryContainer,
+              child: Text(
+                comment.createdByName.isNotEmpty
+                    ? comment.createdByName[0].toUpperCase()
+                    : '?',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: cs.onPrimaryContainer,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        comment.createdByName,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            timeAgo,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: cs.onSurface.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          if (isOwner) ...[
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: onDelete,
+                              child: Icon(
+                                Icons.delete_outline_rounded,
+                                size: 14,
+                                color: cs.error.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    comment.text,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.4,
+                      color: cs.onSurface.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// INFO CARD
+// ─────────────────────────────────────────────
 class _InfoCard extends StatelessWidget {
   final ColorScheme cs;
   final String label;
   final String name;
 
-  const _InfoCard({required this.cs, required this.label, required this.name});
+  const _InfoCard({
+    required this.cs,
+    required this.label,
+    required this.name,
+  });
 
   @override
   Widget build(BuildContext context) {

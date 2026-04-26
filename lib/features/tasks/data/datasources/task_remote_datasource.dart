@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:task_manager/features/tasks/data/models/comment_model.dart';
 import 'package:task_manager/features/tasks/data/models/task_model.dart';
+import 'package:task_manager/features/tasks/domain/entities/comment_entity.dart';
 import 'package:task_manager/features/tasks/domain/entities/task_entity.dart';
 import 'package:uuid/uuid.dart';
 
@@ -36,7 +38,27 @@ abstract class TaskRemoteDataSource {
   });
 
   Future<void> deleteTask({required String taskId, required String deletedBy});
+
+  Stream<List<CommentEntity>> getComments({
+    required String workspaceId,
+    required String taskId,
+  });
+
+  Future<void> addComment({
+    required String workspaceId,
+    required String taskId,
+    required String text,
+    required String createdBy,
+    required String createdByName,
+  });
+
+  Future<void> deleteComment({
+    required String workspaceId,
+    required String taskId,
+    required String commentId,
+  });
 }
+
 
 class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   final FirebaseFirestore _firestore;
@@ -250,5 +272,61 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
             'updatedAt': FieldValue.serverTimestamp(),
           });
     }
+ }
+
+  @override
+  Stream<List<CommentEntity>> getComments({
+    required String workspaceId,
+    required String taskId,
+  }) {
+    return _firestore
+        .collection('workspaces')
+        .doc(workspaceId)
+        .collection('tasks')
+        .doc(taskId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => CommentModel.fromFirestore(doc))
+            .toList());
+  }
+
+  @override
+  Future<void> addComment({
+    required String workspaceId,
+    required String taskId,
+    required String text,
+    required String createdBy,
+    required String createdByName,
+  }) async {
+    await _firestore
+        .collection('workspaces')
+        .doc(workspaceId)
+        .collection('tasks')
+        .doc(taskId)
+        .collection('comments')
+        .add({
+      'text': text,
+      'createdBy': createdBy,
+      'createdByName': createdByName,
+      'createdAt': Timestamp.now(),
+    });
+  }
+
+  @override
+  Future<void> deleteComment({
+    required String workspaceId,
+    required String taskId,
+    required String commentId,
+  }) async {
+    await _firestore
+        .collection('workspaces')
+        .doc(workspaceId)
+        .collection('tasks')
+        .doc(taskId)
+        .collection('comments')
+        .doc(commentId)
+        .delete();
   }
 }

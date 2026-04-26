@@ -1,4 +1,5 @@
 import 'package:task_manager/features/tasks/data/datasources/task_remote_datasource.dart';
+import 'package:task_manager/features/tasks/domain/entities/comment_entity.dart';
 import 'package:task_manager/features/tasks/domain/entities/task_entity.dart';
 import 'package:task_manager/features/tasks/domain/repositories/task_repository.dart';
 
@@ -75,6 +76,7 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
+  @override
   Future<void> deleteTask({
     required String taskId,
     required String deletedBy,
@@ -82,6 +84,47 @@ class TaskRepositoryImpl implements TaskRepository {
     return _dataSource.deleteTask(
       taskId: taskId,
       deletedBy: deletedBy,
+    );
+  }
+
+  @override
+  Stream<List<CommentEntity>> getComments({
+    required String workspaceId,
+    required String taskId,
+  }) {
+    return _dataSource.getComments(
+      workspaceId: workspaceId,
+      taskId: taskId,
+    );
+  }
+
+  @override
+  Future<void> addComment({
+    required String workspaceId,
+    required String taskId,
+    required String text,
+    required String createdBy,
+    required String createdByName,
+  }) {
+    return _dataSource.addComment(
+      workspaceId: workspaceId,
+      taskId: taskId,
+      text: text,
+      createdBy: createdBy,
+      createdByName: createdByName,
+    );
+  }
+
+  @override
+  Future<void> deleteComment({
+    required String workspaceId,
+    required String taskId,
+    required String commentId,
+  }) {
+    return _dataSource.deleteComment(
+      workspaceId: workspaceId,
+      taskId: taskId,
+      commentId: commentId,
     );
   }
 }

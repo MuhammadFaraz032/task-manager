@@ -1,3 +1,4 @@
+import 'package:task_manager/features/tasks/domain/entities/comment_entity.dart';
 import 'package:task_manager/features/tasks/domain/entities/task_entity.dart';
 
 abstract class TaskRepository {
@@ -35,5 +36,24 @@ abstract class TaskRepository {
   Future<void> deleteTask({
     required String taskId,
     required String deletedBy,
+  });
+
+  Stream<List<CommentEntity>> getComments({
+    required String workspaceId,
+    required String taskId,
+  });
+
+  Future<void> addComment({
+    required String workspaceId,
+    required String taskId,
+    required String text,
+    required String createdBy,
+    required String createdByName,
+  });
+
+  Future<void> deleteComment({
+    required String workspaceId,
+    required String taskId,
+    required String commentId,
   });
 }
