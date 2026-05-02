@@ -37,6 +37,13 @@
             {
               "client_id": "217643332600-b7n4un6sfvr2cv6v2e6h4he2v1fdaf02.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "217643332600-4dt8qmi3c6a5rqf8ksa7gmmgsolpj796.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.taskManager"
+              }
             }
           ]
         }

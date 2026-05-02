@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:task_manager/core/di/injection_container.dart';
 import 'package:task_manager/core/router/app_router.dart';
 import 'package:task_manager/core/theme/theme_cubit.dart';
@@ -9,29 +11,69 @@ import 'package:task_manager/core/theme/themecolors.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
 import 'package:task_manager/features/members/presentation/bloc/invite_bloc.dart';
+import 'package:task_manager/features/notifications/presentation/bloc/notification_bloc.dart';
 import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
 import 'package:task_manager/features/workspace/presentation/cubit/workspace_cubit.dart';
 import 'package:task_manager/firebase_options.dart';
 import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
 import 'package:task_manager/features/members/presentation/bloc/member_bloc.dart';
 
-void main() async {
-  // LEARNING: WidgetsFlutterBinding.ensureInitialized() must be
-  // called before any async work in main(). It initializes the
-  // Flutter engine binding so plugins like Firebase can be set up
-  // before runApp() is called.
-  WidgetsFlutterBinding.ensureInitialized();
+// Handles notifications when app is completely killed
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+}
 
-  // LEARNING: Firebase.initializeApp() reads the google-services.json
-  // file (via firebase_options.dart) and connects the app to your
-  // Firebase project. Must be awaited before anything else runs.
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // LEARNING: setupDependencies() must be called after
-  // Firebase.initializeApp() because some dependencies
-  // like FirebaseAuth and FirebaseFirestore need Firebase
-  // to be initialized before they can be instantiated
+  // Register background handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Setup local notifications channel
+  const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'task_manager_channel',
+    'Task Manager Notifications',
+    description: 'Notifications for task assignments, completions and comments',
+    importance: Importance.high,
+  );
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  // Request permission on Android 13+
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
   await setupDependencies();
+
+  // Handle foreground notifications
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    final notification = message.notification;
+    if (notification != null) {
+      flutterLocalNotificationsPlugin.show(
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'task_manager_channel',
+            'Task Manager Notifications',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+      );
+    }
+  });
 
   runApp(
     MultiBlocProvider(
@@ -43,6 +85,7 @@ void main() async {
         BlocProvider(create: (_) => getIt<TaskBloc>()),
         BlocProvider(create: (_) => getIt<MemberBloc>()),
         BlocProvider(create: (_) => getIt<InviteBloc>()),
+        BlocProvider(create: (_) => getIt<NotificationBloc>()),
       ],
       child: const MyApp(),
     ),
@@ -59,7 +102,6 @@ class MyApp extends StatelessWidget {
           current is AuthAuthenticated && previous is! AuthAuthenticated,
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          // print('🟡 MyApp listener — loading workspace for: ${state.user.uid}');
           context.read<WorkspaceCubit>().loadWorkspace(ownerId: state.user.uid);
         }
       },

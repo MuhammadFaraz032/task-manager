@@ -36,7 +36,7 @@ class _PendingInvitesPageState extends State<PendingInvitesPage> {
 
     context.read<InviteBloc>().add(
           AcceptInviteRequested(
-            workspaceId: invite.invitedBy,
+            workspaceId: invite.workspaceId,
             inviteId: invite.id,
             userId: authState.user.uid,
           ),
@@ -46,7 +46,7 @@ class _PendingInvitesPageState extends State<PendingInvitesPage> {
   void _decline(InviteEntity invite) {
     context.read<InviteBloc>().add(
           DeclineInviteRequested(
-            workspaceId: invite.invitedBy,
+            workspaceId: invite.workspaceId,
             inviteId: invite.id,
           ),
         );
@@ -76,7 +76,7 @@ class _PendingInvitesPageState extends State<PendingInvitesPage> {
           }
           if (state is InviteError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
+              const SnackBar(content: Text('An error occurred.')),
             );
           }
         },

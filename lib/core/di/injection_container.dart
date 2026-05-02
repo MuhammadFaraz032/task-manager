@@ -14,6 +14,12 @@ import 'package:task_manager/features/auth/domain/usecases/register_usecase.dart
 import 'package:task_manager/features/auth/domain/usecases/update_user_usecase.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:task_manager/features/members/presentation/bloc/invite_bloc.dart';
+import 'package:task_manager/features/notifications/data/datasources/notification_remote_datasource.dart';
+import 'package:task_manager/features/notifications/data/repositories/notification_repository_impl.dart';
+import 'package:task_manager/features/notifications/domain/repositories/notification_repository.dart';
+import 'package:task_manager/features/notifications/domain/usecases/get_notifications_usecase.dart';
+import 'package:task_manager/features/notifications/domain/usecases/mark_read_usecase.dart';
+import 'package:task_manager/features/notifications/presentation/bloc/notification_bloc.dart';
 import 'package:task_manager/features/tasks/data/datasources/task_remote_datasource.dart';
 import 'package:task_manager/features/tasks/data/repositories/task_repository_impl.dart';
 import 'package:task_manager/features/tasks/domain/repositories/task_repository.dart';
@@ -33,7 +39,9 @@ import 'package:task_manager/features/workspace/data/datasources/workspace_remot
 import 'package:task_manager/features/workspace/data/repositories/workspace_repository_impl.dart';
 import 'package:task_manager/features/workspace/domain/repositories/workspace_repository.dart';
 import 'package:task_manager/features/workspace/domain/usecases/create_workspace_usecase.dart';
+import 'package:task_manager/features/workspace/domain/usecases/get_user_workspaces_usecase.dart';
 import 'package:task_manager/features/workspace/domain/usecases/get_workspace_usecase.dart';
+import 'package:task_manager/features/workspace/domain/usecases/set_active_workspace_usecase.dart';
 import 'package:task_manager/features/workspace/presentation/cubit/workspace_cubit.dart';
 
 // Add imports
@@ -99,7 +107,6 @@ Future<void> setupDependencies() async {
       registerUseCase: getIt(),
       logoutUseCase: getIt(),
       createWorkspaceUseCase: getIt(),
-      getWorkspaceUseCase: getIt(),
       updateUserUseCase: getIt(),
       getCurrentUserUseCase: getIt(),
     ),
@@ -120,14 +127,19 @@ Future<void> setupDependencies() async {
   );
 
   // Use Cases
+ // Use Cases
   getIt.registerLazySingleton(() => CreateWorkspaceUseCase(getIt()));
   getIt.registerLazySingleton(() => GetWorkspaceUseCase(getIt()));
+  getIt.registerLazySingleton(() => GetUserWorkspacesUseCase(getIt()));
+  getIt.registerLazySingleton(() => SetActiveWorkspaceUseCase(getIt()));
 
   // Cubit — Singleton because one workspace per session
   getIt.registerLazySingleton(
     () => WorkspaceCubit(
       createWorkspaceUseCase: getIt(),
       getWorkspaceUseCase: getIt(),
+      getUserWorkspacesUseCase: getIt(),
+      setActiveWorkspaceUseCase: getIt(),
     ),
   );
 
@@ -241,6 +253,28 @@ Future<void> setupDependencies() async {
       getCommentsUseCase: getIt(),
       addCommentUseCase: getIt(),
       deleteCommentUseCase: getIt(),
+    ),
+  );
+
+  // ─────────────────────────────────────────────
+  // NOTIFICATIONS FEATURE
+  // ─────────────────────────────────────────────
+
+  getIt.registerLazySingleton<NotificationRemoteDataSource>(
+    () => NotificationRemoteDataSourceImpl(firestore: getIt()),
+  );
+
+  getIt.registerLazySingleton<NotificationRepository>(
+    () => NotificationRepositoryImpl(dataSource: getIt()),
+  );
+
+  getIt.registerLazySingleton(() => GetNotificationsUseCase(getIt()));
+  getIt.registerLazySingleton(() => MarkReadUseCase(getIt()));
+
+  getIt.registerFactory(
+    () => NotificationBloc(
+      getNotificationsUseCase: getIt(),
+      markReadUseCase: getIt(),
     ),
   );
 }

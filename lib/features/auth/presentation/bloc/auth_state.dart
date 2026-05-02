@@ -19,12 +19,15 @@ class AuthLoading extends AuthState {
 }
 
 // User is logged in
+// User is logged in
 class AuthAuthenticated extends AuthState {
   final UserEntity user;
-  const AuthAuthenticated(this.user);
+  final String? activeWorkspaceId;
+
+  const AuthAuthenticated(this.user, {this.activeWorkspaceId});
 
   @override
-  List<Object?> get props => [user];
+  List<Object?> get props => [user, activeWorkspaceId];
 }
 
 // User is not logged in

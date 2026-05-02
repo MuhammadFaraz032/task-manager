@@ -13,13 +13,13 @@ class UserModel extends UserEntity {
     super.photoUrl,
     super.jobTitle,
     required super.workspaceId,
+    super.activeWorkspaceId,
     required super.createdAt,
   });
 
   // LEARNING: fromFirestore converts raw
   // Firestore document data into a UserModel
-  factory UserModel.fromFirestore(
-      DocumentSnapshot<Map<String, dynamic>> doc) {
+  factory UserModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data()!;
     return UserModel(
       uid: doc.id,
@@ -28,6 +28,7 @@ class UserModel extends UserEntity {
       photoUrl: data['photoUrl'],
       jobTitle: data['jobTitle'],
       workspaceId: data['workspaceId'] ?? '',
+      activeWorkspaceId: data['activeWorkspaceId'] as String?,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
     );
   }
@@ -41,6 +42,7 @@ class UserModel extends UserEntity {
       'photoUrl': photoUrl,
       'jobTitle': jobTitle ?? '',
       'workspaceId': workspaceId,
+      'activeWorkspaceId': activeWorkspaceId,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': FieldValue.serverTimestamp(),
     };

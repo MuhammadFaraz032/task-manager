@@ -131,6 +131,7 @@ class _ManageWorkspacePageState extends State<ManageWorkspacePage> {
           BlocListener<InviteBloc, InviteState>(
             listener: (context, state) {
               if (state is InviteSent) {
+                if (Navigator.canPop(context)) Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Invite sent successfully')),
                 );
@@ -241,8 +242,6 @@ class _InviteMemberSheetState extends State<_InviteMemberSheet> {
             invitedBy: authState.user.uid,
           ),
         );
-
-    Navigator.pop(context);
   }
 
   @override

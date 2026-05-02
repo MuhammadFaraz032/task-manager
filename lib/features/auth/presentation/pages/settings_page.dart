@@ -142,7 +142,7 @@ class _SettingsView extends StatelessWidget {
                     icon: Icons.work_rounded,
                     title: "Manage Workspace",
                     subtitle: "Active",
-                    onTap: () => context.push('/workspace'),
+                    onTap: () => context.push('/workspaces'),
                   ),
                 ],
               ),

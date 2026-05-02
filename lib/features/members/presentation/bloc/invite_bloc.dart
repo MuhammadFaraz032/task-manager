@@ -40,6 +40,7 @@ class InviteBloc extends Bloc<InviteEvent, InviteState> {
     InviteUserRequested event,
     Emitter<InviteState> emit,
   ) async {
+    emit(InviteLoading());
     try {
       await inviteUserUseCase(
         workspaceId: event.workspaceId,

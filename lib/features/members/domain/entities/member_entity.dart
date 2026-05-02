@@ -21,13 +21,15 @@ class MemberEntity extends Equatable {
 
 class InviteEntity extends Equatable {
   final String id;
+  final String workspaceId;
   final String email;
   final String invitedBy;
-  final String status; // pending | accepted | declined
+  final String status;
   final DateTime createdAt;
 
   const InviteEntity({
     required this.id,
+    required this.workspaceId,
     required this.email,
     required this.invitedBy,
     required this.status,
@@ -35,5 +37,5 @@ class InviteEntity extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, email, invitedBy, status, createdAt];
+  List<Object?> get props => [id, workspaceId, email, invitedBy, status, createdAt];
 }

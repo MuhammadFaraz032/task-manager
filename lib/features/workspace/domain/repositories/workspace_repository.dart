@@ -14,4 +14,19 @@ abstract class WorkspaceRepository {
     required String userId,
     required String workspaceId,
   });
+
+  Future<List<WorkspaceEntity>> getUserWorkspaces({
+    required String userId,
+  });
+
+  Future<void> addWorkspaceToUser({
+    required String userId,
+    required String workspaceId,
+  });
+
+  Future<void> setActiveWorkspace({
+    required String userId,
+    required String workspaceId,
+  });
+
 }

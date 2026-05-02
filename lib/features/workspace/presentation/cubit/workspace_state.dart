@@ -18,10 +18,15 @@ class WorkspaceLoading extends WorkspaceState {
 
 class WorkspaceLoaded extends WorkspaceState {
   final WorkspaceEntity workspace;
-  const WorkspaceLoaded(this.workspace);
+  final List<WorkspaceEntity> allWorkspaces;
+
+  const WorkspaceLoaded({
+    required this.workspace,
+    required this.allWorkspaces,
+  });
 
   @override
-  List<Object?> get props => [workspace];
+  List<Object?> get props => [workspace, allWorkspaces];
 }
 
 class WorkspaceError extends WorkspaceState {

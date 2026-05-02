@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:task_manager/core/theme/themecolors.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
+import 'package:task_manager/features/notifications/presentation/bloc/notification_bloc.dart';
+import 'package:task_manager/features/notifications/presentation/bloc/notification_state.dart';
 
 class DashboardAppBar extends StatelessWidget {
   const DashboardAppBar({super.key});
@@ -126,40 +129,59 @@ class _NotificationButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        InkWell(
-          onTap: () {},
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: cs.surface,
-              border: Border.all(color: cs.outline),
+    return BlocBuilder<NotificationBloc, NotificationState>(
+      builder: (context, state) {
+        int unreadCount = 0;
+        if (state is NotificationsLoaded) {
+          unreadCount = state.notifications.where((n) => !n.isRead).length;
+        }
+
+        return Stack(
+          children: [
+            InkWell(
+              onTap: () => context.push('/notifications'),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: cs.surface,
+                  border: Border.all(color: cs.outline),
+                ),
+                child: Icon(
+                  Icons.notifications_rounded,
+                  size: 20,
+                  color: cs.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
             ),
-            child: Icon(
-              Icons.notifications_rounded,
-              size: 20,
-              color: cs.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 8,
-          right: 8,
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: cs.error,
-              shape: BoxShape.circle,
-              border: Border.all(color: cs.background, width: 1.5),
-            ),
-          ),
-        ),
-      ],
+            if (unreadCount > 0)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: cs.error,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: cs.surface, width: 1.5),
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Text(
+                    unreadCount > 9 ? '9+' : '$unreadCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

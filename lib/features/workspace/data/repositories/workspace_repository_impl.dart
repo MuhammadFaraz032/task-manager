@@ -27,11 +27,41 @@ class WorkspaceRepositoryImpl implements WorkspaceRepository {
   }
 
   @override
+  @override
   Future<void> updateWorkspaceId({
     required String userId,
     required String workspaceId,
   }) {
     return _dataSource.updateWorkspaceId(
+      userId: userId,
+      workspaceId: workspaceId,
+    );
+  }
+
+  @override
+  Future<List<WorkspaceEntity>> getUserWorkspaces({
+    required String userId,
+  }) {
+    return _dataSource.getUserWorkspaces(userId: userId);
+  }
+
+  @override
+  Future<void> addWorkspaceToUser({
+    required String userId,
+    required String workspaceId,
+  }) {
+    return _dataSource.addWorkspaceToUser(
+      userId: userId,
+      workspaceId: workspaceId,
+    );
+  }
+
+  @override
+  Future<void> setActiveWorkspace({
+    required String userId,
+    required String workspaceId,
+  }) {
+    return _dataSource.setActiveWorkspace(
       userId: userId,
       workspaceId: workspaceId,
     );

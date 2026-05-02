@@ -2,19 +2,18 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
-    // LEARNING: google-services plugin reads google-services.json
-    // and generates the Firebase configuration for the app
     id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.faraz.taskmanager"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -24,9 +23,7 @@ android {
     defaultConfig {
         applicationId = "com.faraz.taskmanager"
         minSdk = flutter.minSdkVersion
-        // LEARNING: minSdk 23 is required for Firebase Auth
-        // default flutter.minSdkVersion is 21 which is too low
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -40,4 +37,13 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Latest desugar library for AGP 8.11.1
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+    
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.12.0"))
+    implementation("com.google.firebase:firebase-messaging")
 }

@@ -16,11 +16,13 @@ import 'package:task_manager/features/dashboard/presentation/widgets/todays_focu
 import 'package:task_manager/features/members/presentation/bloc/invite_bloc.dart';
 import 'package:task_manager/features/members/presentation/bloc/invite_event.dart';
 import 'package:task_manager/features/members/presentation/bloc/invite_state.dart';
+import 'package:task_manager/features/notifications/presentation/bloc/notification_bloc.dart';
+import 'package:task_manager/features/notifications/presentation/bloc/notification_event.dart';
 import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
 import 'package:task_manager/features/projects/presentation/bloc/project_event.dart';
 import 'package:task_manager/features/projects/presentation/pages/projects_page.dart';
-import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
-import 'package:task_manager/features/tasks/presentation/bloc/task_event.dart';
+// import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
+// import 'package:task_manager/features/tasks/presentation/bloc/task_event.dart';
 import 'package:task_manager/features/workspace/presentation/cubit/workspace_cubit.dart';
 import 'package:task_manager/features/workspace/presentation/cubit/workspace_state.dart';
 
@@ -92,10 +94,16 @@ class DashboardContent extends StatefulWidget {
 
 class _DashboardContentState extends State<DashboardContent> {
   @override
+  @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
+      // Try loading immediately — workspace may already be loaded
+      final workspaceState = context.read<WorkspaceCubit>().state;
+      if (workspaceState is WorkspaceLoaded) {
+        _loadData();
+      }
+      // BlocListener will catch it if workspace loads after this
     });
   }
 
@@ -103,17 +111,17 @@ class _DashboardContentState extends State<DashboardContent> {
     final workspaceId = context.read<WorkspaceCubit>().currentWorkspaceId;
     if (workspaceId != null) {
       context.read<ProjectBloc>().add(
-            ProjectsLoadRequested(workspaceId: workspaceId),
-          );
-      context.read<TaskBloc>().add(
-            TasksLoadRequested(workspaceId: workspaceId),
-          );
+        ProjectsLoadRequested(workspaceId: workspaceId),
+      );
     }
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       context.read<InviteBloc>().add(
-            PendingInvitesLoadRequested(userEmail: authState.user.email),
-          );
+        PendingInvitesLoadRequested(userEmail: authState.user.email),
+      );
+      context.read<NotificationBloc>().add(
+        NotificationsLoadRequested(authState.user.uid),
+      );
     }
   }
 
