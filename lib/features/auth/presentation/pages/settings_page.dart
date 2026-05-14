@@ -118,14 +118,14 @@ class _SettingsView extends StatelessWidget {
                     icon: Icons.dark_mode_rounded,
                     title: "Dark Mode",
                     value: isDark,
-                    onChanged: (_) =>
-                        context.read<ThemeCubit>().toggleTheme(),
+                    onChanged: (_) => context.read<ThemeCubit>().toggleTheme(),
                   ),
                   Divider(color: cs.outline, height: 1),
                   _NavTile(
                     cs: cs,
                     icon: Icons.notifications_rounded,
                     title: "Notifications",
+                    onTap: () => context.push('/notifications'),
                   ),
                 ],
               ),
@@ -195,7 +195,9 @@ class _SettingsView extends StatelessWidget {
                                   content: Text(
                                     "Are you sure you want to logout?",
                                     style: TextStyle(
-                                      color: cs.onSurface.withValues(alpha: 0.7),
+                                      color: cs.onSurface.withValues(
+                                        alpha: 0.7,
+                                      ),
                                     ),
                                   ),
                                   actions: [
@@ -211,8 +213,8 @@ class _SettingsView extends StatelessWidget {
                                       onPressed: () {
                                         Navigator.pop(dialogContext);
                                         context.read<AuthBloc>().add(
-                                              const AuthLogoutRequested(),
-                                            );
+                                          const AuthLogoutRequested(),
+                                        );
                                       },
                                       child: Text(
                                         "Logout",
@@ -305,10 +307,7 @@ class _SectionContainer extends StatelessWidget {
   final List<Widget> children;
   final ColorScheme cs;
 
-  const _SectionContainer({
-    required this.children,
-    required this.cs,
-  });
+  const _SectionContainer({required this.children, required this.cs});
 
   @override
   Widget build(BuildContext context) {
@@ -364,10 +363,7 @@ class _NavTile extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: cs.onSurface,
-                ),
+                style: TextStyle(fontSize: 15, color: cs.onSurface),
               ),
             ),
             if (subtitle != null)

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -18,6 +20,7 @@ import 'package:task_manager/features/members/presentation/pages/manage_workspac
 import 'package:task_manager/features/workspace/domain/entities/workspace_entity.dart';
 import 'package:task_manager/features/workspace/presentation/pages/workspace_detail_page.dart';
 import 'package:task_manager/features/workspace/presentation/pages/workspace_list_page.dart';
+import 'package:flutter/services.dart';
 // import 'package:task_manager/features/members/presentation/pages/pending_invites_page.dart';
 
 // LEARNING: GoRouter listens to Firebase auth state stream.
@@ -218,38 +221,128 @@ class _AppShellState extends State<AppShell> {
     _currentIndex = _routes.indexWhere((r) => location.startsWith(r));
     if (_currentIndex == -1) _currentIndex = 0;
 
-    return Scaffold(
-      body: widget.child,
-      bottomNavigationBar: BottomNavigation(
-        currentIndex: _currentIndex,
-        onTap: _onNavTap,
+    final isOnDashboard = location.startsWith('/dashboard');
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        // If not on dashboard — go to dashboard
+        if (!isOnDashboard) {
+          context.go('/dashboard');
+          return;
+        }
+
+        // If on dashboard — show exit confirmation
+        // If on dashboard — show exit confirmation
+        final cs = Theme.of(context).colorScheme;
+        final tt = Theme.of(context).textTheme;
+
+        final shouldExit = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+            child: AlertDialog(
+              insetPadding: EdgeInsets.all(10),
+              backgroundColor: cs.surface,
+              surfaceTintColor:
+                  cs.surfaceTint, // Adds that nice M3 elevation tint
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                  15,
+                ), // Softer, more modern corners
+              ),
+              icon: Icon(Icons.logout_rounded, color: cs.error, size: 32),
+              title: Text(
+                'Exit Application',
+                style: tt.headlineSmall?.copyWith(
+                  color: cs.onSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Are you sure you want to leave?',
+                    textAlign: TextAlign.center,
+                    style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+              actionsAlignment: MainAxisAlignment.spaceEvenly,
+              actionsPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
+              actions: [
+                Row(
+                  children: [
+                    // Use Expanded on both to ensure they take up 50% of the width each
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: cs.outlineVariant),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              8,
+                            ), // Matching the exit button
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                          ), // Taller for better touch targets
+                        ),
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: Text(
+                          'Stay',
+                          style: TextStyle(
+                            color: cs.outlineVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(
+                      width: 12,
+                    ), // Controlled spacing between them
+                    Expanded(
+                      child: FilledButton.tonal(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: cs.errorContainer,
+                          foregroundColor: cs.onErrorContainer,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        onPressed: () => SystemNavigator.pop(),
+                        child: const Text(
+                          'Exit App',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+
+        if (shouldExit == true) {
+          // Actually exit the app
+          // ignore: use_build_context_synchronously
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        body: widget.child,
+        bottomNavigationBar: BottomNavigation(
+          currentIndex: _currentIndex,
+          onTap: _onNavTap,
+        ),
       ),
     );
   }
 }
-// ```
-
-// ---
-
-// ## What Changed
-// ```
-// Added:
-// ├── refreshListenable → GoRouterRefreshStream
-// │   → watches Firebase auth state
-// │   → re-runs redirect on login/logout
-
-// ├── redirect function
-// │   → not logged in + protected page → /login
-// │   → logged in + auth page → /dashboard
-// │   → otherwise → null (allow)
-
-// └── GoRouterRefreshStream class
-//     → converts Firebase Stream to Listenable
-// ```
-
-// Now test these flows:
-// ```
-// 1. App open while logged out → should go to /login
-// 2. App open while logged in  → should skip login → /dashboard
-// 3. After logout              → should go to /login automatically
-// 4. Try typing /dashboard URL → should redirect to /login

@@ -64,11 +64,11 @@ class _AddTaskPageState extends State<AddTaskPage> {
     final workspaceState = context.read<WorkspaceCubit>().state;
     if (workspaceState is WorkspaceLoaded) {
       context.read<MemberBloc>().add(
-            MembersLoadRequested(
-              workspaceId: workspaceState.workspace.id,
-              memberIds: workspaceState.workspace.members,
-            ),
-          );
+        MembersLoadRequested(
+          workspaceId: workspaceState.workspace.id,
+          memberIds: workspaceState.workspace.members,
+        ),
+      );
     }
   }
 
@@ -125,41 +125,43 @@ class _AddTaskPageState extends State<AddTaskPage> {
           .toList();
 
       context.read<TaskBloc>().add(
-            TaskUpdateRequested(
-              taskId: widget.task!.id,
-              title: _titleController.text.trim(),
-              description: _descriptionController.text.trim(),
-              priority: _selectedPriority,
-              status: widget.task!.status,
-              dueDate: _selectedDate,
-              checklist: updatedChecklist,
-              assignedTo: _selectedAssignee?.uid ?? widget.task!.assignedTo,
-            ),
-          );
+        TaskUpdateRequested(
+          taskId: widget.task!.id,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          priority: _selectedPriority,
+          status: widget.task!.status,
+          dueDate: _selectedDate,
+          checklist: updatedChecklist,
+          assignedTo: _selectedAssignee?.uid ?? widget.task!.assignedTo,
+        ),
+      );
     } else {
       // Create mode
       final checklist = _checklistControllers
           .where((c) => c.text.trim().isNotEmpty)
-          .map((c) => ChecklistItem(
-                id: const Uuid().v4(),
-                title: c.text.trim(),
-                isCompleted: false,
-              ))
+          .map(
+            (c) => ChecklistItem(
+              id: const Uuid().v4(),
+              title: c.text.trim(),
+              isCompleted: false,
+            ),
+          )
           .toList();
 
       context.read<TaskBloc>().add(
-            TaskCreateRequested(
-              title: _titleController.text.trim(),
-              description: _descriptionController.text.trim(),
-              workspaceId: workspaceState.workspace.id,
-              createdBy: authState.user.uid,
-              projectId: widget.projectId,
-              priority: _selectedPriority,
-              dueDate: _selectedDate,
-              checklist: checklist,
-              assignedTo: _selectedAssignee?.uid,
-            ),
-          );
+        TaskCreateRequested(
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          workspaceId: workspaceState.workspace.id,
+          createdBy: authState.user.uid,
+          projectId: widget.projectId,
+          priority: _selectedPriority,
+          dueDate: _selectedDate,
+          checklist: checklist,
+          assignedTo: _selectedAssignee?.uid,
+        ),
+      );
     }
   }
 
@@ -204,20 +206,35 @@ class _AddTaskPageState extends State<AddTaskPage> {
                     TextField(
                       controller: _titleController,
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 20,
                         fontWeight: FontWeight.w600,
                         color: cs.onSurface,
                       ),
                       decoration: InputDecoration(
                         hintText: 'Task Title',
                         hintStyle: TextStyle(
-                          fontSize: 24,
+                          fontSize: 20,
                           fontWeight: FontWeight.w600,
                           color: cs.onSurface.withValues(alpha: 0.3),
                         ),
-                        border: InputBorder.none,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 4),
+                        filled: true,
+                        fillColor: cs.surfaceContainerHighest,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: cs.outline, width: 1.5),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: cs.outline, width: 1.5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: cs.primary, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                       ),
                     ),
 
@@ -230,27 +247,33 @@ class _AddTaskPageState extends State<AddTaskPage> {
                       cs: cs,
                     ),
                     const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      constraints: const BoxConstraints(minHeight: 80),
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-                      decoration: BoxDecoration(
-                        color: cs.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: TextField(
-                        controller: _descriptionController,
-                        maxLines: null,
-                        style: TextStyle(fontSize: 16, color: cs.onSurface),
-                        decoration: InputDecoration(
-                          hintText: 'Add details about this task...',
-                          hintStyle: TextStyle(
-                            fontSize: 16,
-                            color: cs.onSurface.withValues(alpha: 0.4),
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
+                    TextField(
+                      controller: _descriptionController,
+                      maxLines: 4,
+                      style: TextStyle(fontSize: 16, color: cs.onSurface),
+                      decoration: InputDecoration(
+                        hintText: 'Add details about this task...',
+                        hintStyle: TextStyle(
+                          fontSize: 16,
+                          color: cs.onSurface.withValues(alpha: 0.4),
+                        ),
+                        filled: true,
+                        fillColor: cs.surfaceContainerHighest,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: cs.outline, width: 1.5),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: cs.outline, width: 1.5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: cs.primary, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
                         ),
                       ),
                     ),
@@ -405,9 +428,11 @@ class _AssigneeSearchFieldState extends State<_AssigneeSearchField> {
     }
 
     final results = widget.members
-        .where((m) =>
-            m.email.toLowerCase().contains(query.toLowerCase()) ||
-            m.fullName.toLowerCase().contains(query.toLowerCase()))
+        .where(
+          (m) =>
+              m.email.toLowerCase().contains(query.toLowerCase()) ||
+              m.fullName.toLowerCase().contains(query.toLowerCase()),
+        )
         .toList();
 
     setState(() {
@@ -462,8 +487,7 @@ class _AssigneeSearchFieldState extends State<_AssigneeSearchField> {
                       backgroundColor: cs.primaryContainer,
                       child: Text(
                         widget.selectedAssignee!.fullName.isNotEmpty
-                            ? widget.selectedAssignee!.fullName[0]
-                                .toUpperCase()
+                            ? widget.selectedAssignee!.fullName[0].toUpperCase()
                             : '?',
                         style: TextStyle(
                           fontSize: 12,
@@ -478,8 +502,10 @@ class _AssigneeSearchFieldState extends State<_AssigneeSearchField> {
                     ),
               suffixIcon: widget.selectedAssignee != null
                   ? IconButton(
-                      icon: Icon(Icons.close_rounded,
-                          color: cs.onSurface.withValues(alpha: 0.5)),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: cs.onSurface.withValues(alpha: 0.5),
+                      ),
                       onPressed: _clearSelection,
                     )
                   : null,
@@ -576,8 +602,7 @@ class _SheetHeader extends StatelessWidget {
               ),
             ),
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -675,26 +700,27 @@ class _DueDatePicker extends StatelessWidget {
         _DateChip(
           cs: cs,
           label: 'Today',
-          isSelected:
-              selectedDate != null && _isSameDay(selectedDate!, now),
+          isSelected: selectedDate != null && _isSameDay(selectedDate!, now),
           onTap: () => onDateSelected(now),
         ),
         _DateChip(
           cs: cs,
           label: 'Tomorrow',
-          isSelected: selectedDate != null &&
-              _isSameDay(selectedDate!, tomorrow),
+          isSelected:
+              selectedDate != null && _isSameDay(selectedDate!, tomorrow),
           onTap: () => onDateSelected(tomorrow),
         ),
         _DateChip(
           cs: cs,
-          label: selectedDate != null &&
+          label:
+              selectedDate != null &&
                   !_isSameDay(selectedDate!, now) &&
                   !_isSameDay(selectedDate!, tomorrow)
               ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
               : 'Pick Date',
           icon: Icons.calendar_month_rounded,
-          isSelected: selectedDate != null &&
+          isSelected:
+              selectedDate != null &&
               !_isSameDay(selectedDate!, now) &&
               !_isSameDay(selectedDate!, tomorrow),
           onTap: () async {
@@ -733,8 +759,7 @@ class _DateChip extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
               ? cs.primary.withValues(alpha: 0.1)
@@ -918,7 +943,7 @@ class _ChecklistSection extends StatelessWidget {
             ),
             InkWell(
               onTap: onAddItem,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(4),
               child: Row(
                 children: [
                   Icon(Icons.add_rounded, size: 14, color: cs.primary),
@@ -1056,9 +1081,7 @@ class _StickyFooter extends StatelessWidget {
                         ),
                       )
                     : Icon(
-                        isEditing
-                            ? Icons.save_outlined
-                            : Icons.add_rounded,
+                        isEditing ? Icons.save_outlined : Icons.add_rounded,
                         color: Colors.white,
                         size: 20,
                       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:task_manager/core/utils/skeleton_loader.dart';
 import 'package:task_manager/core/widgets/app_bottom_navbar.dart';
 import 'package:task_manager/core/widgets/coming_soon.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
@@ -20,11 +21,13 @@ import 'package:task_manager/features/notifications/presentation/bloc/notificati
 import 'package:task_manager/features/notifications/presentation/bloc/notification_event.dart';
 import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
 import 'package:task_manager/features/projects/presentation/bloc/project_event.dart';
+import 'package:task_manager/features/projects/presentation/bloc/project_state.dart';
 import 'package:task_manager/features/projects/presentation/pages/projects_page.dart';
-// import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
-// import 'package:task_manager/features/tasks/presentation/bloc/task_event.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/task_bloc.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/task_state.dart';
 import 'package:task_manager/features/workspace/presentation/cubit/workspace_cubit.dart';
 import 'package:task_manager/features/workspace/presentation/cubit/workspace_state.dart';
+import 'package:task_manager/features/tasks/presentation/bloc/task_event.dart';
 
 class MainDashboard extends StatefulWidget {
   const MainDashboard({super.key});
@@ -94,16 +97,13 @@ class DashboardContent extends StatefulWidget {
 
 class _DashboardContentState extends State<DashboardContent> {
   @override
-  @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Try loading immediately — workspace may already be loaded
       final workspaceState = context.read<WorkspaceCubit>().state;
       if (workspaceState is WorkspaceLoaded) {
         _loadData();
       }
-      // BlocListener will catch it if workspace loads after this
     });
   }
 
@@ -112,6 +112,9 @@ class _DashboardContentState extends State<DashboardContent> {
     if (workspaceId != null) {
       context.read<ProjectBloc>().add(
         ProjectsLoadRequested(workspaceId: workspaceId),
+      );
+      context.read<TaskBloc>().add(
+        TasksLoadRequested(workspaceId: workspaceId),
       );
     }
     final authState = context.read<AuthBloc>().state;
@@ -131,31 +134,47 @@ class _DashboardContentState extends State<DashboardContent> {
       listenWhen: (previous, current) => current is WorkspaceLoaded,
       listener: (context, state) => _loadData(),
       child: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: const [
-            DashboardAppBar(),
-            SizedBox(height: 16),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  GreetingSection(),
+        child: BlocBuilder<ProjectBloc, ProjectState>(
+          builder: (context, projectState) {
+            final taskState = context.watch<TaskBloc>().state;
+
+            final isLoading =
+                (projectState is ProjectInitial ||
+                    projectState is ProjectLoading) &&
+                (taskState is TaskInitial || taskState is TaskLoading);
+
+            if (isLoading) return const DashboardSkeleton();
+
+            return RefreshIndicator(
+              onRefresh: () async => _loadData(),
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: const [
+                  DashboardAppBar(),
                   SizedBox(height: 16),
-                  _PendingInvitesBanner(),
-                  SizedBox(height: 24),
-                  StatsGrid(),
-                  SizedBox(height: 24),
-                  RecentProjectsSection(),
-                  SizedBox(height: 24),
-                  QuickActionsSection(),
-                  SizedBox(height: 24),
-                  TodaysFocusSection(),
-                  SizedBox(height: 100),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        GreetingSection(),
+                        SizedBox(height: 16),
+                        _PendingInvitesBanner(),
+                        SizedBox(height: 24),
+                        StatsGrid(),
+                        SizedBox(height: 24),
+                        RecentProjectsSection(),
+                        SizedBox(height: 24),
+                        QuickActionsSection(),
+                        SizedBox(height: 24),
+                        TodaysFocusSection(),
+                        SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

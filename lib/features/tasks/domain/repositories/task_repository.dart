@@ -16,6 +16,7 @@ abstract class TaskRepository {
     required TaskPriority priority,
     DateTime? dueDate,
     required List<ChecklistItem> checklist,
+    String? assignedTo,
   });
 
   Future<TaskEntity> updateTask({
@@ -26,6 +27,7 @@ abstract class TaskRepository {
     required TaskStatus status,
     DateTime? dueDate,
     required List<ChecklistItem> checklist,
+    String? assignedTo,
   });
 
   Future<TaskEntity> toggleTask({

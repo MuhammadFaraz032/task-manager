@@ -30,6 +30,7 @@ class TaskRepositoryImpl implements TaskRepository {
     required TaskPriority priority,
     DateTime? dueDate,
     required List<ChecklistItem> checklist,
+    String? assignedTo,
   }) {
     return _dataSource.createTask(
       title: title,
@@ -40,6 +41,7 @@ class TaskRepositoryImpl implements TaskRepository {
       priority: priority,
       dueDate: dueDate,
       checklist: checklist,
+      assignedTo: assignedTo,
     );
   }
 
@@ -52,6 +54,7 @@ class TaskRepositoryImpl implements TaskRepository {
     required TaskStatus status,
     DateTime? dueDate,
     required List<ChecklistItem> checklist,
+    String? assignedTo,
   }) {
     return _dataSource.updateTask(
       taskId: taskId,
@@ -61,6 +64,7 @@ class TaskRepositoryImpl implements TaskRepository {
       status: status,
       dueDate: dueDate,
       checklist: checklist,
+      assignedTo: assignedTo,
     );
   }
 
@@ -75,7 +79,6 @@ class TaskRepositoryImpl implements TaskRepository {
     );
   }
 
-  @override
   @override
   Future<void> deleteTask({
     required String taskId,

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:task_manager/core/theme/themecolors.dart';
+import 'package:task_manager/core/utils/permission_helper.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_event.dart';
 
@@ -32,6 +33,7 @@ class _SplashScreenState extends State<SplashScreen> {
     });
 
     await Future.delayed(const Duration(seconds: 3));
+    await PermissionHelper.requestBatteryOptimization();
     if (!mounted) return;
     final isLoggedIn = FirebaseAuth.instance.currentUser != null;
     if (isLoggedIn) {

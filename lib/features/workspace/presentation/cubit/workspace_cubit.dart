@@ -47,8 +47,6 @@ class WorkspaceCubit extends Cubit<WorkspaceState> {
       }
 
       // Use activeWorkspaceId if provided, otherwise fall back to owned workspace
-      // Use activeWorkspaceId if provided, otherwise fall back to owned workspace
-     // Use activeWorkspaceId if provided, otherwise fall back to owned workspace
       WorkspaceEntity active = allWorkspaces.first;
       for (final w in allWorkspaces) {
         if (activeWorkspaceId != null && w.id == activeWorkspaceId) {
@@ -94,16 +92,19 @@ class WorkspaceCubit extends Cubit<WorkspaceState> {
     final current = state;
     if (current is! WorkspaceLoaded) return;
 
-    final target = current.allWorkspaces.firstWhere(
-      (w) => w.id == workspaceId,
-      orElse: () => current.workspace,
-    );
+    final target =
+        current.allWorkspaces.where((w) => w.id == workspaceId).firstOrNull ??
+        current.allWorkspaces.first;
 
     // Persist the choice so it survives app restart
-    await _setActiveWorkspaceUseCase.execute(
-      userId: userId,
-      workspaceId: workspaceId,
-    );
+    try {
+      await _setActiveWorkspaceUseCase.execute(
+        userId: userId,
+        workspaceId: workspaceId,
+      );
+    } catch (_) {
+      // Firestore write failed — still switch in memory so UI doesn't hang
+    }
 
     emit(
       WorkspaceLoaded(workspace: target, allWorkspaces: current.allWorkspaces),

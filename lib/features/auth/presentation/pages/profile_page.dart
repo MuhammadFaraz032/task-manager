@@ -35,276 +35,338 @@ class _ProfileView extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Container(
-            width: double.infinity,
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height,
-            ),
-            padding: const EdgeInsets.fromLTRB(10, 10, 10, 96),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                /// Header
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: cs.surface,
-                          borderRadius: BorderRadius.circular(16),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            final authState = context.read<AuthBloc>().state;
+            if (authState is AuthAuthenticated) {
+              context.read<AuthBloc>().add(AuthCheckRequested());
+            }
+          },
+          child: SingleChildScrollView(
+            child: Container(
+              width: double.infinity,
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height,
+              ),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 96),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  /// Header
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: cs.surface,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.arrow_back,
+                              size: 16,
+                              color: cs.onSurface,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
                         ),
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.arrow_back,
-                            size: 16,
+                        Text(
+                          "Profile",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
                             color: cs.onSurface,
                           ),
-                          onPressed: () => Navigator.pop(context),
                         ),
-                      ),
-                      Text(
-                        "Profile",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: cs.onSurface,
-                        ),
-                      ),
-                      // LEARNING: GestureDetector wraps the Edit
-                      // text to make it tappable without a button
-                      GestureDetector(
-                        onTap: () => _showEditSheet(context, user),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          child: Text(
-                            "Edit",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: cs.primary,
+                        // LEARNING: GestureDetector wraps the Edit
+                        // text to make it tappable without a button
+                        GestureDetector(
+                          onTap: () => _showEditSheet(context, user),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
                             ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                /// Profile Section
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(bottom: 32),
-                  child: Column(
-                    children: [
-                      /// Avatar
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            width: 128,
-                            height: 128,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: cs.primary.withValues(alpha: 0.2),
-                                width: 4,
-                              ),
-                            ),
-                            child: Container(
-                              margin: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [cs.primary, cs.secondary],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                              ),
-                              child: user?.photoUrl != null
-                                  ? ClipOval(
-                                      child: Image.network(
-                                        user!.photoUrl!,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    )
-                                  : Center(
-                                      child: Text(
-                                        user?.fullName
-                                                .substring(0, 1)
-                                                .toUpperCase() ??
-                                            '?',
-                                        style: const TextStyle(
-                                          fontSize: 40,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          Positioned(
-                            right: 4,
-                            bottom: 4,
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
+                            child: Text(
+                              "Edit",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
                                 color: cs.primary,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: theme.scaffoldBackgroundColor,
-                                  width: 2,
-                                ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x1A000000),
-                                    blurRadius: 15,
-                                    offset: Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.edit,
-                                size: 14,
-                                color: Colors.white,
                               ),
                             ),
                           ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      /// Name and Email
-                      Text(
-                        user?.fullName ?? 'Loading...',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.6,
-                          color: cs.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user?.email ?? '',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: cs.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      if (user?.jobTitle != null && user!.jobTitle!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            user.jobTitle!,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: cs.onSurface.withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-
-                /// Stats Grid
-                /// Stats Grid
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(bottom: 32),
-                  child: Builder(
-                    builder: (context) {
-                      // Read real counts from blocs
-                      final projectState = context.watch<ProjectBloc>().state;
-                      final taskState = context.watch<TaskBloc>().state;
-
-                      final projectCount = projectState is ProjectsLoaded
-                          ? projectState.projects.length
-                          : 0;
-
-                      final tasks = taskState is TasksLoaded
-                          ? taskState.tasks
-                          : <TaskEntity>[];
-                      final taskCount = tasks.length;
-                      final completedCount = tasks
-                          .where((t) => t.status == TaskStatus.completed)
-                          .length;
-                      final score = taskCount == 0
-                          ? '0%'
-                          : '${((completedCount / taskCount) * 100).round()}%';
-
-                      return Row(
-                        children: [
-                          Expanded(
-                            child: _buildStatCard(
-                              context,
-                              label: "Projects",
-                              value: '$projectCount',
-                              gradient: LinearGradient(
-                                colors: [cs.primary, cs.primary],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatCard(
-                              context,
-                              label: "Tasks",
-                              value: '$taskCount',
-                              gradient: LinearGradient(
-                                colors: [cs.secondary, cs.primary],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatCard(
-                              context,
-                              label: "Score",
-                              value: score,
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF3B82F6), Color(0xFFA855F7)],
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-
-                /// Personal Information
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(bottom: 32),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: cs.surface,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x0D000000),
-                          blurRadius: 2,
-                          offset: Offset(0, 1),
                         ),
                       ],
                     ),
+                  ),
+
+                  /// Profile Section
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.only(bottom: 32),
+                    child: Column(
+                      children: [
+                        /// Avatar
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 128,
+                              height: 128,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: cs.primary.withValues(alpha: 0.2),
+                                  width: 4,
+                                ),
+                              ),
+                              child: Container(
+                                margin: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: [cs.primary, cs.secondary],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                ),
+                                child: user?.photoUrl != null
+                                    ? ClipOval(
+                                        child: Image.network(
+                                          user!.photoUrl!,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    : Center(
+                                        child: Text(
+                                          user?.fullName
+                                                  .substring(0, 1)
+                                                  .toUpperCase() ??
+                                              '?',
+                                          style: const TextStyle(
+                                            fontSize: 40,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            Positioned(
+                              right: 4,
+                              bottom: 4,
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: cs.primary,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: theme.scaffoldBackgroundColor,
+                                    width: 2,
+                                  ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x1A000000),
+                                      blurRadius: 15,
+                                      offset: Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.edit,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        /// Name and Email
+                        Text(
+                          user?.fullName ?? 'Loading...',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.6,
+                            color: cs.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          user?.email ?? '',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: cs.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        if (user?.jobTitle != null &&
+                            user!.jobTitle!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              user.jobTitle!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: cs.onSurface.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  /// Stats Grid
+                  /// Stats Grid
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.only(bottom: 32),
+                    child: Builder(
+                      builder: (context) {
+                        // Read real counts from blocs
+                        final projectState = context.watch<ProjectBloc>().state;
+                        final taskState = context.watch<TaskBloc>().state;
+
+                        final projectCount = projectState is ProjectsLoaded
+                            ? projectState.projects.length
+                            : 0;
+
+                        final tasks = taskState is TasksLoaded
+                            ? taskState.tasks
+                            : <TaskEntity>[];
+                        final taskCount = tasks.length;
+                        final completedCount = tasks
+                            .where((t) => t.status == TaskStatus.completed)
+                            .length;
+                        final score = taskCount == 0
+                            ? '0%'
+                            : '${((completedCount / taskCount) * 100).round()}%';
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                context,
+                                label: "Projects",
+                                value: '$projectCount',
+                                gradient: LinearGradient(
+                                  colors: [cs.primary, cs.primary],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStatCard(
+                                context,
+                                label: "Tasks",
+                                value: '$taskCount',
+                                gradient: LinearGradient(
+                                  colors: [cs.secondary, cs.primary],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStatCard(
+                                context,
+                                label: "Score",
+                                value: score,
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF3B82F6),
+                                    Color(0xFFA855F7),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+
+                  /// Personal Information
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.only(bottom: 32),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: cs.surface,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0D000000),
+                            blurRadius: 2,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "PERSONAL INFORMATION",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.4,
+                              color: cs.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildInfoTile(
+                            context,
+                            label: "Full Name",
+                            value: user?.fullName ?? '—',
+                          ),
+                          const SizedBox(height: 16),
+                          _buildInfoTile(
+                            context,
+                            label: "Email Address",
+                            value: user?.email ?? '—',
+                          ),
+                          const SizedBox(height: 16),
+                          _buildInfoTile(
+                            context,
+                            label: "Current Role",
+                            value:
+                                (user?.jobTitle != null &&
+                                    user!.jobTitle!.isNotEmpty)
+                                ? user.jobTitle!
+                                : 'Not set',
+                          ),
+                          const SizedBox(height: 16),
+                          _buildInfoTile(
+                            context,
+                            label: "Member Since",
+                            value: user != null
+                                ? _formatDate(user.createdAt)
+                                : '—',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  /// Recent Activity
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "PERSONAL INFORMATION",
+                          "RECENT ACTIVITY",
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -313,70 +375,20 @@ class _ProfileView extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        _buildInfoTile(
+                        _buildActivityTile(
                           context,
-                          label: "Full Name",
-                          value: user?.fullName ?? '—',
-                        ),
-                        const SizedBox(height: 16),
-                        _buildInfoTile(
-                          context,
-                          label: "Email Address",
-                          value: user?.email ?? '—',
-                        ),
-                        const SizedBox(height: 16),
-                        _buildInfoTile(
-                          context,
-                          label: "Current Role",
-                          value:
-                              (user?.jobTitle != null &&
-                                  user!.jobTitle!.isNotEmpty)
-                              ? user.jobTitle!
-                              : 'Not set',
-                        ),
-                        const SizedBox(height: 16),
-                        _buildInfoTile(
-                          context,
-                          label: "Member Since",
-                          value: user != null
-                              ? _formatDate(user.createdAt)
-                              : '—',
+                          icon: Icons.check_circle,
+                          iconColor: cs.primary,
+                          title: "Account created",
+                          subtitle: user != null
+                              ? "Welcome ${user.fullName.split(' ').first}!"
+                              : "Welcome!",
                         ),
                       ],
                     ),
                   ),
-                ),
-
-                /// Recent Activity
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "RECENT ACTIVITY",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.4,
-                          color: cs.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildActivityTile(
-                        context,
-                        icon: Icons.check_circle,
-                        iconColor: cs.primary,
-                        title: "Account created",
-                        subtitle: user != null
-                            ? "Welcome ${user.fullName.split(' ').first}!"
-                            : "Welcome!",
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

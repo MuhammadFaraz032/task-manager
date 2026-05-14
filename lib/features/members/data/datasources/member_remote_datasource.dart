@@ -77,6 +77,12 @@ class MemberRemoteDataSourceImpl implements MemberRemoteDataSource {
     });
 
     await batch.commit();
+
+    // Add workspace to user's workspaces[] array
+    // so it appears in their workspace list
+    await firestore.collection('users').doc(userId).update({
+      'workspaces': FieldValue.arrayUnion([workspaceId]),
+    });
   }
 
   @override

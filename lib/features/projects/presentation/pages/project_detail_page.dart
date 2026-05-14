@@ -41,139 +41,153 @@ class ProjectDetailScreen extends StatelessWidget {
       }
     }
 
-    return Scaffold(
-      backgroundColor: cs.surface,
-      body: project == null
-          ? _buildLoading(cs)
-          : Stack(
-              children: [
-                CustomScrollView(
-                  slivers: [
-                    /// Sticky Header
-                    SliverAppBar(
-                      pinned: true,
-                      floating: false,
-                      backgroundColor: cs.surface,
-                      elevation: 0,
-                      toolbarHeight: 64,
-                      automaticallyImplyLeading: false,
-                      flexibleSpace: Container(
-                        decoration: BoxDecoration(
-                          border: Border(bottom: BorderSide(color: cs.outline)),
-                        ),
-                        child: SafeArea(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    InkWell(
-                                      // ✅ Fixed
-                                      onTap: () {
-                                        if (context.canPop()) {
-                                          context.pop();
-                                        } else {
-                                          context.go('/projects');
-                                        }
-                                      },
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Container(
-                                        width: 36,
-                                        height: 36,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: cs.surface,
-                                          border: Border.all(color: cs.outline),
-                                        ),
-                                        child: Icon(
-                                          Icons.arrow_back_ios_rounded,
-                                          color: cs.primary,
-                                          size: 14,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        context.go('/projects');
+      },
+      child: Scaffold(
+        backgroundColor: cs.surface,
+        body: project == null
+            ? _buildLoading(cs)
+            : Stack(
+                children: [
+                  CustomScrollView(
+                    slivers: [
+                      /// Sticky Header
+                      SliverAppBar(
+                        pinned: true,
+                        floating: false,
+                        backgroundColor: cs.surface,
+                        elevation: 0,
+                        toolbarHeight: 64,
+                        automaticallyImplyLeading: false,
+                        flexibleSpace: Container(
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: cs.outline),
+                            ),
+                          ),
+                          child: SafeArea(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      InkWell(
+                                        // ✅ Fixed
+                                        onTap: () {
+                                          if (context.canPop()) {
+                                            context.pop();
+                                          } else {
+                                            context.go('/projects');
+                                          }
+                                        },
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: Container(
+                                          width: 36,
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: cs.surface,
+                                            border: Border.all(
+                                              color: cs.outline,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.arrow_back_ios_rounded,
+                                            color: cs.primary,
+                                            size: 14,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    SizedBox(
-                                      width:
-                                          MediaQuery.of(context).size.width *
-                                          0.55,
-                                      child: Text(
-                                        project.name,
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: -0.45,
-                                          color: cs.onSurface,
+                                      const SizedBox(width: 12),
+                                      SizedBox(
+                                        width:
+                                            MediaQuery.of(context).size.width *
+                                            0.55,
+                                        child: Text(
+                                          project.name,
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: -0.45,
+                                            color: cs.onSurface,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                InkWell(
-                                  onTap: () =>
-                                      _showOptionsMenu(context, project!),
-                                  borderRadius: BorderRadius.circular(20),
-                                  child: Container(
-                                    width: 36,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: cs.surface,
-                                      border: Border.all(color: cs.outline),
-                                    ),
-                                    child: Icon(
-                                      Icons.more_vert_rounded,
-                                      color: cs.onSurface,
-                                      size: 18,
+                                    ],
+                                  ),
+                                  InkWell(
+                                    onTap: () =>
+                                        _showOptionsMenu(context, project!),
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: cs.surface,
+                                        border: Border.all(color: cs.outline),
+                                      ),
+                                      child: Icon(
+                                        Icons.more_vert_rounded,
+                                        color: cs.onSurface,
+                                        size: 18,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
 
-                    /// Content
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate([
-                          /// Progress Card
-                          _ProgressCard(cs: cs, project: project),
+                      /// Content
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            /// Progress Card
+                            _ProgressCard(cs: cs, project: project),
 
-                          const SizedBox(height: 32),
+                            const SizedBox(height: 32),
 
-                          /// Task Section — still mock for now
-                          /// TODO: wire to TaskBloc in next step
-                          _TaskSection(
-                            cs: cs,
-                            projectId: projectId,
-                            workspaceId:
-                                (context.read<WorkspaceCubit>().state
-                                        as WorkspaceLoaded)
-                                    .workspace
-                                    .id,
-                          ),
-                        ]),
+                            /// Task Section — still mock for now
+                            /// TODO: wire to TaskBloc in next step
+                            _TaskSection(
+                              cs: cs,
+                              projectId: projectId,
+                              workspaceId:
+                                  (context.read<WorkspaceCubit>().state
+                                          as WorkspaceLoaded)
+                                      .workspace
+                                      .id,
+                            ),
+                          ]),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
 
-                /// Bottom Add Task Button
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: _AddTaskButton(cs: cs, projectId: projectId),
-                ),
-              ],
-            ),
+                  /// Bottom Add Task Button
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: _AddTaskButton(cs: cs, projectId: projectId),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 

@@ -1,6 +1,6 @@
 name: task_manager
 description: "A Firebase-powered task management app built with BLoC and Clean Architecture."
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
@@ -37,6 +37,10 @@ dependencies:
   # Notificcations
   firebase_messaging: ^15.2.5
   flutter_local_notifications: ^18.0.1
+
+  # Permission for notifications
+  permission_handler: ^11.3.1
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

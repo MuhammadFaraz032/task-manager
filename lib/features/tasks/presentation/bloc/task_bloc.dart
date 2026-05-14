@@ -42,37 +42,37 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
   }
 
   Future<void> _onTasksLoadRequested(
-  TasksLoadRequested event,
-  Emitter<TaskState> emit,
-) async {
-  // print('🔵 TASKS LOAD REQUESTED: workspaceId=${event.workspaceId}');
-  emit(const TaskLoading());
-  try {
-    await _tasksSubscription?.cancel();
-    // print('🔵 Old subscription cancelled');
-    
-    _lastWorkspaceId = event.workspaceId;
-    _lastProjectId = event.projectId;
+    TasksLoadRequested event,
+    Emitter<TaskState> emit,
+  ) async {
+    // print('🔵 TASKS LOAD REQUESTED: workspaceId=${event.workspaceId}');
+    emit(const TaskLoading());
+    try {
+      await _tasksSubscription?.cancel();
+      // print('🔵 Old subscription cancelled');
 
-    await emit.forEach(
-      _getTasksUseCase.execute(
-        workspaceId: event.workspaceId,
-        projectId: event.projectId,
-      ),
-      onData: (tasks) {
-        // print('🔵 TASKS RECEIVED FROM STREAM: ${tasks.length} tasks');
-        return TasksLoaded(tasks);
-      },
-      onError: (error, _) {
-        // print('🔴 STREAM ERROR: $error');
-        return TaskError(error.toString());
-      },
-    );
-  } catch (e) {
-    // print('🔴 CATCH ERROR: $e');
-    emit(TaskError(e.toString()));
+      _lastWorkspaceId = event.workspaceId;
+      _lastProjectId = event.projectId;
+
+      await emit.forEach(
+        _getTasksUseCase.execute(
+          workspaceId: event.workspaceId,
+          projectId: event.projectId,
+        ),
+        onData: (tasks) {
+          // print('🔵 TASKS RECEIVED FROM STREAM: ${tasks.length} tasks');
+          return TasksLoaded(tasks);
+        },
+        onError: (error, _) {
+          // print('🔴 STREAM ERROR: $error');
+          return TaskError(error.toString());
+        },
+      );
+    } catch (e) {
+      // print('🔴 CATCH ERROR: $e');
+      emit(TaskError(e.toString()));
+    }
   }
-}
 
   Future<void> _onTaskCreateRequested(
     TaskCreateRequested event,
@@ -88,6 +88,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
         priority: event.priority,
         dueDate: event.dueDate,
         checklist: event.checklist,
+        assignedTo: event.assignedTo,
       );
       emit(const TaskOperationSuccess('Task created'));
     } catch (e) {
@@ -108,6 +109,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
         status: event.status,
         dueDate: event.dueDate,
         checklist: event.checklist,
+        assignedTo: event.assignedTo,
       );
 
       if (_lastWorkspaceId != null) {

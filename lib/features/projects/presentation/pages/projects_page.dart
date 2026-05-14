@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:task_manager/core/theme/themecolors.dart';
+import 'package:task_manager/core/utils/skeleton_loader.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
 import 'package:task_manager/features/projects/domain/entities/project_entity.dart';
@@ -177,8 +178,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               builder: (context, state) {
                 // Loading state
                 if (state is ProjectLoading) {
-                  return Center(
-                    child: CircularProgressIndicator(color: cs.primary),
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
+                    child: ProjectsGridSkeleton(),
                   );
                 }
 
@@ -292,11 +294,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ],
                   );
                 }
-
-                // Initial state — show empty with shimmer feel
                 // Initial state — show loader while projects load
-                return Center(
-                  child: CircularProgressIndicator(color: cs.primary),
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
+                  child: ProjectsGridSkeleton(),
                 );
               },
             ),
@@ -338,29 +339,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       ),
     );
   }
-
-  // void _showAddProjectSheet(BuildContext context) {
-  //   final projectBloc = context.read<ProjectBloc>();
-  //   final workspaceState = context.read<WorkspaceCubit>().state;
-  //   final authState = context.read<AuthBloc>().state;
-  //   final cs = Theme.of(context).colorScheme;
-
-  //   if (workspaceState is! WorkspaceLoaded) return;
-  //   if (authState is! AuthAuthenticated) return;
-
-  //   showModalBottomSheet(
-  //     context: context,
-  //     isScrollControlled: true,
-  //     backgroundColor: Colors.transparent,
-  //     builder: (_) => BlocProvider.value(
-  //       value: projectBloc,
-  //       child: _AddProjectSheet(
-  //         workspaceId: workspaceState.workspace.id,
-  //         createdBy: authState.user.uid,
-  //       ),
-  //     ),
-  //   );
-  // }
 }
 
 // ─────────────────────────────────────────────
@@ -785,7 +763,15 @@ class _SheetTextField extends StatelessWidget {
         fillColor: cs.surfaceContainerHighest,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(color: cs.outline, width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: cs.outline, width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: cs.primary, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,

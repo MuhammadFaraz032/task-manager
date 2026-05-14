@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:task_manager/core/theme/themecolors.dart';
+import 'package:task_manager/core/utils/skeleton_loader.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
 import 'package:task_manager/features/projects/presentation/bloc/project_bloc.dart';
@@ -49,14 +50,8 @@ class _TasksScreenState extends State<TasksScreen>
     }
   }
 
-  // void _onRouteChange() {
-  //   if (mounted) _loadTasks();
-  // }
-
   @override
   void dispose() {
-    // GoRouter.of(context).routerDelegate.removeListener(_onRouteChange);
-    // _tabController.dispose();
     super.dispose();
   }
 
@@ -67,37 +62,40 @@ class _TasksScreenState extends State<TasksScreen>
     Map<String, String> projectNames,
   ) {
     if (taskState is TaskLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const TaskListSkeleton();
     }
     if (tasks.isEmpty) {
       return _EmptyState(cs: cs);
     }
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-      itemCount: tasks.length,
-      itemBuilder: (context, index) {
-        final task = tasks[index];
-        final projectName = task.projectId != null
-            ? projectNames[task.projectId]
-            : null;
-        return _TaskCard(
-          cs: cs,
-          task: task,
-          projectName: projectName,
-          onToggle: () {
-            final authState = context.read<AuthBloc>().state;
-            if (authState is AuthAuthenticated) {
-              context.read<TaskBloc>().add(
-                TaskToggleRequested(
-                  taskId: task.id,
-                  completedBy: authState.user.uid,
-                ),
-              );
-            }
-          },
-          onTap: () => context.push('/task/${task.id}'),
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: () async => _loadTasks(),
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+        itemCount: tasks.length,
+        itemBuilder: (context, index) {
+          final task = tasks[index];
+          final projectName = task.projectId != null
+              ? projectNames[task.projectId]
+              : null;
+          return _TaskCard(
+            cs: cs,
+            task: task,
+            projectName: projectName,
+            onToggle: () {
+              final authState = context.read<AuthBloc>().state;
+              if (authState is AuthAuthenticated) {
+                context.read<TaskBloc>().add(
+                  TaskToggleRequested(
+                    taskId: task.id,
+                    completedBy: authState.user.uid,
+                  ),
+                );
+              }
+            },
+            onTap: () => context.push('/task/${task.id}'),
+          );
+        },
+      ),
     );
   }
 
@@ -171,9 +169,6 @@ class _TasksScreenState extends State<TasksScreen>
   }
 }
 
-// ─────────────────────────────────────────────
-// HEADER WITH TABS
-// ─────────────────────────────────────────────
 // ─────────────────────────────────────────────
 // HEADER WITH CUSTOM TABS
 // ─────────────────────────────────────────────
@@ -322,13 +317,13 @@ class _FilterDropdownButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeFilter = filters[selectedIndex];
-    
+
     return GestureDetector(
       onTap: () async {
         // Get the button's position on screen
         final RenderBox button = context.findRenderObject() as RenderBox;
         final Offset offset = button.localToGlobal(Offset.zero);
-        
+
         final result = await showMenu<int>(
           context: context,
           position: RelativeRect.fromLTRB(
@@ -370,11 +365,7 @@ class _FilterDropdownButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.filter_alt_outlined,
-              size: 14,
-              color: cs.primary,
-            ),
+            Icon(Icons.filter_alt_outlined, size: 14, color: cs.primary),
             const SizedBox(width: 6),
             Text(
               activeFilter,
@@ -476,7 +467,9 @@ class _TaskCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: isCompleted ? cs.surface.withValues(alpha: 0.5) : cs.surface,
             border: Border.all(
-              color: isCompleted ? cs.outline.withValues(alpha: 0.5) : cs.outline,
+              color: isCompleted
+                  ? cs.outline.withValues(alpha: 0.5)
+                  : cs.outline,
             ),
             borderRadius: BorderRadius.circular(20),
           ),
@@ -533,7 +526,9 @@ class _TaskCard extends StatelessWidget {
                               decoration: isCompleted
                                   ? TextDecoration.lineThrough
                                   : null,
-                              decorationColor: cs.onSurface.withValues(alpha: 0.4),
+                              decorationColor: cs.onSurface.withValues(
+                                alpha: 0.4,
+                              ),
                             ),
                           ),
                         ),
@@ -562,75 +557,9 @@ class _TaskCard extends StatelessWidget {
 
                     const SizedBox(height: 8),
 
-                    // Project badge + Due date
+                    // Assigned + Due date row
                     Row(
                       children: [
-                        if (task.projectId == null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: cs.primary.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.person_rounded,
-                                  size: 10,
-                                  color: cs.primary.withValues(alpha: 0.7),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Standalone',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: cs.primary.withValues(alpha: 0.7),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: cs.primary.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: cs.primary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  projectName ?? 'Project',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: cs.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                        const Spacer(),
-
                         if (task.assignedTo != null)
                           Container(
                             margin: const EdgeInsets.only(right: 8),
@@ -662,7 +591,7 @@ class _TaskCard extends StatelessWidget {
                               ],
                             ),
                           ),
-
+                        const Spacer(),
                         if (task.dueDate != null)
                           Row(
                             children: [
@@ -684,6 +613,76 @@ class _TaskCard extends StatelessWidget {
                           ),
                       ],
                     ),
+
+                    const SizedBox(height: 6),
+
+                    // Project badge — separate row so long names don't overflow
+                    if (task.projectId == null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.person_rounded,
+                              size: 10,
+                              color: cs.primary.withValues(alpha: 0.7),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Standalone',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: cs.primary.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: cs.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                projectName ?? 'Project',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.primary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -704,42 +703,50 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.checklist_rounded,
-              size: 32,
-              color: cs.primary.withValues(alpha: 0.5),
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(
+          height: 400,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.checklist_rounded,
+                    size: 32,
+                    color: cs.primary.withValues(alpha: 0.5),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No tasks here',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tap + to add your first task',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: cs.onSurface.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'No tasks here',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: cs.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tap + to add your first task',
-            style: TextStyle(
-              fontSize: 14,
-              color: cs.onSurface.withValues(alpha: 0.4),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

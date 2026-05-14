@@ -15,6 +15,7 @@ class CreateTaskUseCase {
     required TaskPriority priority,
     DateTime? dueDate,
     required List<ChecklistItem> checklist,
+    String? assignedTo,
   }) {
     return _repository.createTask(
       title: title,
@@ -25,6 +26,7 @@ class CreateTaskUseCase {
       priority: priority,
       dueDate: dueDate,
       checklist: checklist,
+      assignedTo: assignedTo,
     );
   }
 }

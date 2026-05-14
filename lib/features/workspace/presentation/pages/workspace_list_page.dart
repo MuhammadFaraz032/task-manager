@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:task_manager/core/utils/skeleton_loader.dart';
+import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:task_manager/features/auth/presentation/bloc/auth_state.dart';
 import 'package:task_manager/features/members/presentation/bloc/invite_bloc.dart';
 import 'package:task_manager/features/members/presentation/bloc/invite_state.dart';
 // import 'package:task_manager/features/auth/presentation/bloc/auth_bloc.dart';
@@ -16,92 +19,76 @@ class WorkspaceListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Workspaces'),
-        actions: [
-          BlocBuilder<InviteBloc, InviteState>(
-            builder: (context, state) {
-              final count =
-                  state is PendingInvitesLoaded ? state.invites.length : 0;
-              return Stack(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.mail_outline_rounded),
-                    onPressed: () => context.push('/invites'),
-                  ),
-                  if (count > 0)
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.error,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          '$count',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        context.go('/settings');
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go('/settings'),
+          ),
+          title: const Text('My Workspaces'),
+          actions: [
+            BlocBuilder<InviteBloc, InviteState>(
+              builder: (context, state) {
+                final count = state is PendingInvitesLoaded
+                    ? state.invites.length
+                    : 0;
+                return Stack(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.mail_outline_rounded),
+                      onPressed: () => context.push('/invites'),
+                    ),
+                    if (count > 0)
+                      Positioned(
+                        right: 6,
+                        top: 6,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '$count',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-      body: BlocBuilder<WorkspaceCubit, WorkspaceState>(
-        builder: (context, state) {
-          if (state is WorkspaceLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+        body: BlocBuilder<WorkspaceCubit, WorkspaceState>(
+          builder: (context, state) {
+            if (state is WorkspaceLoading) {
+              return const WorkspaceListSkeleton();
+            }
 
-          if (state is WorkspaceError) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.wifi_off_rounded,
-                    size: 64,
-                    color: cs.onSurface.withValues(alpha: 0.3),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Could not load workspaces',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: cs.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (state is WorkspaceLoaded) {
-            final workspaces = state.allWorkspaces;
-            final activeId = state.workspace.id;
-
-            if (workspaces.isEmpty) {
+            if (state is WorkspaceError) {
               return Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.workspaces_outlined,
+                      Icons.wifi_off_rounded,
                       size: 64,
                       color: cs.onSurface.withValues(alpha: 0.3),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No workspaces found',
+                      'Could not load workspaces',
                       style: TextStyle(
                         fontSize: 16,
                         color: cs.onSurface.withValues(alpha: 0.5),
@@ -112,27 +99,66 @@ class WorkspaceListPage extends StatelessWidget {
               );
             }
 
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: workspaces.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final workspace = workspaces[index];
-                final isActive = workspace.id == activeId;
-                return _WorkspaceCard(
-                  workspace: workspace,
-                  isActive: isActive,
-                  onTap: () => context.push(
-                    '/workspace/${workspace.id}',
-                    extra: workspace,
+            if (state is WorkspaceLoaded) {
+              final workspaces = state.allWorkspaces;
+              final activeId = state.workspace.id;
+
+              if (workspaces.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.workspaces_outlined,
+                        size: 64,
+                        color: cs.onSurface.withValues(alpha: 0.3),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No workspaces found',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: cs.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
                   ),
                 );
-              },
-            );
-          }
+              }
 
-          return const SizedBox();
-        },
+              return RefreshIndicator(
+                onRefresh: () async {
+                  context.read<WorkspaceCubit>().loadWorkspace(
+                    ownerId: context.read<AuthBloc>().state is AuthAuthenticated
+                        ? (context.read<AuthBloc>().state as AuthAuthenticated)
+                              .user
+                              .uid
+                        : '',
+                  );
+                },
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: workspaces.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final workspace = workspaces[index];
+                    final isActive = workspace.id == activeId;
+                    return _WorkspaceCard(
+                      workspace: workspace,
+                      isActive: isActive,
+                      onTap: () => context.push(
+                        '/workspace/${workspace.id}',
+                        extra: workspace,
+                      ),
+                    );
+                  },
+                ),
+              );
+            }
+
+            return const SizedBox();
+          },
+        ),
       ),
     );
   }
@@ -177,7 +203,9 @@ class _WorkspaceCard extends StatelessWidget {
               ),
               child: Icon(
                 Icons.workspaces_rounded,
-                color: isActive ? cs.primary : cs.onSurface.withValues(alpha: 0.4),
+                color: isActive
+                    ? cs.primary
+                    : cs.onSurface.withValues(alpha: 0.4),
                 size: 22,
               ),
             ),
@@ -207,7 +235,10 @@ class _WorkspaceCard extends StatelessWidget {
             ),
             if (isActive)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: cs.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),

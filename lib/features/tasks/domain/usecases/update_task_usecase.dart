@@ -14,6 +14,7 @@ class UpdateTaskUseCase {
     required TaskStatus status,
     DateTime? dueDate,
     required List<ChecklistItem> checklist,
+    String? assignedTo,
   }) {
     return _repository.updateTask(
       taskId: taskId,
@@ -23,6 +24,7 @@ class UpdateTaskUseCase {
       status: status,
       dueDate: dueDate,
       checklist: checklist,
+      assignedTo: assignedTo,
     );
   }
 }
